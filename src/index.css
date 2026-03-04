@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-100 text-gray-900 font-sans antialiased;
+    /* Hide scrollbar for better mobile feel */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  body::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  .glass-effect {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+  .glass-dark {
+    @apply bg-gray-900/80 backdrop-blur-md border border-gray-700/50 shadow-2xl;
+  }
+  .premium-gradient {
+    @apply bg-gradient-to-br from-teal-500 via-emerald-600 to-teal-800;
+  }
+  .premium-text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-teal-600 to-emerald-500;
+  }
+}
+
+/* Custom keyframes for smoother UI */
+@keyframes slideDown {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(20, 184, 166, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(20, 184, 166, 0.8); }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}

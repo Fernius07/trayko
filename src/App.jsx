@@ -28,6 +28,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedStore, setSelectedStore] = useState('SuperA');
   const [isFullScreenMap, setIsFullScreenMap] = useState(false);
+  const [showFullRoute, setShowFullRoute] = useState(false);
 
   const pressTimer = useRef(null);
 
@@ -483,8 +484,8 @@ export default function App() {
                         key={product.id}
                         onClick={() => !inCart && addProductToCart(product)}
                         className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart
-                            ? 'bg-emerald-50 border-emerald-200 opacity-60'
-                            : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'
+                          ? 'bg-emerald-50 border-emerald-200 opacity-60'
+                          : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'
                           }`}
                       >
                         <div className="text-left min-w-0">
@@ -611,11 +612,13 @@ export default function App() {
     // --- PATHFINDING Y ROUTING (layout-aware) ---
     const layout = STORE_LAYOUTS[selectedStore];
     const aisleXPositions = layout.aisleXPositions;
+    const crossYTop = layout.crossYTop;     // top horizontal corridor Y
+    const crossYBottom = layout.crossYBottom;  // bottom horizontal corridor Y
     const startPoint = { ...layout.entrance, id: 'start' };
     const endPoint = { ...layout.checkout, id: 'end' };
 
     const getAisleX = (x) => {
-      // Snap to nearest aisle in the active store layout
+      // Snap to nearest aisle corridor in the active store layout
       let best = aisleXPositions[0];
       let bestDist = Math.abs(x - best);
       for (const ax of aisleXPositions) {
@@ -629,10 +632,12 @@ export default function App() {
       const aisleA = getAisleX(pA.x);
       const aisleB = getAisleX(pB.x);
       if (aisleA === aisleB) {
+        // Same corridor — go straight
         return Math.abs(pA.y - pB.y) + Math.abs(pA.x - aisleA) + Math.abs(pB.x - aisleB);
       }
-      const distTop = (pA.y - 50) + Math.abs(aisleA - aisleB) + (pB.y - 50);
-      const distBot = (270 - pA.y) + Math.abs(aisleA - aisleB) + (270 - pB.y);
+      // Need to cross via a horizontal corridor (top or bottom)
+      const distTop = (pA.y - crossYTop) + Math.abs(aisleA - aisleB) + (pB.y - crossYTop);
+      const distBot = (crossYBottom - pA.y) + Math.abs(aisleA - aisleB) + (crossYBottom - pB.y);
       return Math.min(distTop, distBot) + Math.abs(pA.x - aisleA) + Math.abs(pB.x - aisleB);
     };
 
@@ -640,16 +645,18 @@ export default function App() {
       const aisleA = getAisleX(pA.x);
       const aisleB = getAisleX(pB.x);
       const segments = [pA];
+      // Move from item to nearest aisle corridor
       if (pA.x !== aisleA) segments.push({ x: aisleA, y: pA.y });
       if (aisleA !== aisleB) {
-        const distTop = (pA.y - 50) + Math.abs(aisleA - aisleB) + (pB.y - 50);
-        const distBot = (270 - pA.y) + Math.abs(aisleA - aisleB) + (270 - pB.y);
+        // Cross via top or bottom horizontal corridor
+        const distTop = (pA.y - crossYTop) + Math.abs(aisleA - aisleB) + (pB.y - crossYTop);
+        const distBot = (crossYBottom - pA.y) + Math.abs(aisleA - aisleB) + (crossYBottom - pB.y);
         if (distTop < distBot) {
-          segments.push({ x: aisleA, y: 50 });
-          segments.push({ x: aisleB, y: 50 });
+          segments.push({ x: aisleA, y: crossYTop });
+          segments.push({ x: aisleB, y: crossYTop });
         } else {
-          segments.push({ x: aisleA, y: 270 });
-          segments.push({ x: aisleB, y: 270 });
+          segments.push({ x: aisleA, y: crossYBottom });
+          segments.push({ x: aisleB, y: crossYBottom });
         }
       }
       if (pB.x !== aisleB) segments.push({ x: aisleB, y: pB.y });
@@ -688,13 +695,29 @@ export default function App() {
     const originPoint = completedItems.length > 0 ? completedItems[completedItems.length - 1] : startPoint;
     const remainingRouteItems = [originPoint, ...pendingItems, endPoint];
 
-    const routeSegments = [];
+    // ── Next-stop segment (default view: only origin → next item) ──
+    const nextStopItems = pendingItems.length > 0
+      ? [originPoint, pendingItems[0]]
+      : [originPoint, endPoint];
+    const nextSegments = [];
+    {
+      const segs = generatePathSegments(nextStopItems[0], nextStopItems[1]);
+      nextSegments.push(...segs);
+    }
+    const nextRouteString = nextSegments.map(p => `${p.x},${p.y}`).join(' ');
+
+    // ── Full route segments (shown while button is held) ──
+    const fullRouteSegments = [];
     for (let i = 0; i < remainingRouteItems.length - 1; i++) {
       const segs = generatePathSegments(remainingRouteItems[i], remainingRouteItems[i + 1]);
-      if (i === 0) routeSegments.push(...segs);
-      else routeSegments.push(...segs.slice(1));
+      if (i === 0) fullRouteSegments.push(...segs);
+      else fullRouteSegments.push(...segs.slice(1));
     }
-    const routeString = routeSegments.map(p => `${p.x},${p.y}`).join(' ');
+    const fullRouteString = fullRouteSegments.map(p => `${p.x},${p.y}`).join(' ');
+
+    // Active display
+    const routeString = showFullRoute ? fullRouteString : nextRouteString;
+    const routeSegments = showFullRoute ? fullRouteSegments : nextSegments;
 
     // 4. Secciones dinámicas ordenadas por ruta TSP
     const dynamicSectionOrder = [...new Set(optimalOrder.map(i => i.section))];
@@ -738,14 +761,32 @@ export default function App() {
             <div className="flex items-center gap-2 text-gray-500 font-black text-[9px] tracking-widest uppercase mb-2">
               <Navigation className="w-3 h-3 text-emerald-500 animate-pulse" /> LIVE TRACKING
             </div>
-            {!isFullScreenMap && (
+            <div className="flex items-center gap-2">
+              {/* Hold-to-reveal full route button */}
               <button
-                onClick={() => setIsFullScreenMap(true)}
-                className="ml-auto flex items-center justify-center p-2 bg-white/5 rounded-xl border border-white/10 text-gray-400 hover:text-white"
+                onMouseDown={() => setShowFullRoute(true)}
+                onMouseUp={() => setShowFullRoute(false)}
+                onMouseLeave={() => setShowFullRoute(false)}
+                onTouchStart={(e) => { e.preventDefault(); setShowFullRoute(true); }}
+                onTouchEnd={() => setShowFullRoute(false)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all select-none
+                  ${showFullRoute
+                    ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300'
+                    : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'
+                  }`}
               >
-                <Maximize2 className="w-4 h-4" />
+                <Navigation className="w-2.5 h-2.5" />
+                {showFullRoute ? 'Ruta completa' : 'Ver ruta'}
               </button>
-            )}
+              {!isFullScreenMap && (
+                <button
+                  onClick={() => setIsFullScreenMap(true)}
+                  className="flex items-center justify-center p-2 bg-white/5 rounded-xl border border-white/10 text-gray-400 hover:text-white"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="w-full h-full flex justify-center items-center transition-all duration-700" style={{ height: isFullScreenMap ? '100%' : '22vh' }}>
@@ -758,37 +799,77 @@ export default function App() {
               </defs>
               <rect width="100%" height="100%" fill="url(#grid)" />
 
-              {/* Dynamic store shelves from layout config */}
-              <g stroke="#4b5563" strokeWidth="1.5" opacity="0.9">
+              {/* ── Zone floor overlays (semi-transparent coloured areas) ── */}
+              {layout.zones?.map((zone, i) => (
+                <rect
+                  key={`zone-${i}`}
+                  x={zone.x} y={zone.y}
+                  width={zone.width} height={zone.height}
+                  rx="3"
+                  fill={zone.color}
+                  opacity="0.09"
+                />
+              ))}
+
+              {/* ── Shelf blocks (solid, dark) ── */}
+              <g stroke="#374151" strokeWidth="1" opacity="0.95">
                 {layout.shelves.map((shelf, i) => (
                   <rect
                     key={i}
                     x={shelf.x} y={shelf.y}
                     width={shelf.width} height={shelf.height}
-                    rx="4"
-                    fill={shelf.accent ? '#374151' : '#1f2937'}
+                    rx="3"
+                    fill={shelf.accent ? '#1d4ed8' : '#1e293b'}
+                    stroke={shelf.accent ? '#2563eb' : '#374151'}
                   />
                 ))}
               </g>
 
-              {/* Section labels */}
+              {/* ── Section labels (inside zone, subtle) ── */}
               {layout.sectionLabels?.map((lbl, i) => (
-                <text key={i} x={lbl.x} y={lbl.y} fill="#6b7280" fontSize="7" fontWeight="700" textAnchor="start">{lbl.label}</text>
+                <text key={i} x={lbl.x} y={lbl.y} fill="#9ca3af" fontSize="6" fontWeight="700" textAnchor="start">{lbl.label}</text>
               ))}
 
-              {/* Glowing optimized path */}
+              {/* ── Entrance / Checkout clear-path markers ── */}
+              {/* Entrance arrow (down → up, indicates entry direction) */}
+              <g opacity="0.7">
+                <rect x={layout.entrance.x - 18} y={layout.entrance.y - 14} width="36" height="12" rx="3" fill="#1d4ed8" />
+                <text x={layout.entrance.x} y={layout.entrance.y - 5} fill="white" fontSize="5.5" fontWeight="900" textAnchor="middle">ENTRADA</text>
+              </g>
+              <g opacity="0.7">
+                <rect x={layout.checkout.x - 14} y={layout.checkout.y - 14} width="28" height="12" rx="3" fill="#b91c1c" />
+                <text x={layout.checkout.x} y={layout.checkout.y - 5} fill="white" fontSize="5.5" fontWeight="900" textAnchor="middle">CAJA</text>
+              </g>
+
+              {/* ── Route line ── */}
               {routeSegments.length > 1 && (
-                <polyline
-                  points={routeString}
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="4"
-                  strokeDasharray="8,8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.6))' }}
-                  className="animate-[dash_2s_linear_infinite]"
-                />
+                <>
+                  {/* Full route ghost (dimmer, only when showFullRoute) */}
+                  {showFullRoute && fullRouteSegments.length > 1 && (
+                    <polyline
+                      points={fullRouteString}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                      strokeDasharray="5,6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity="0.25"
+                    />
+                  )}
+                  {/* Active segment (bright) */}
+                  <polyline
+                    points={routeString}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="4"
+                    strokeDasharray="8,8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.6))' }}
+                    className="animate-[dash_2s_linear_infinite]"
+                  />
+                </>
               )}
 
               <style dangerouslySetInnerHTML={{ __html: `@keyframes dash { to { stroke-dashoffset: -16; } }` }} />
@@ -826,12 +907,13 @@ export default function App() {
                 );
               })}
 
-              {/* Entrance and Checkout from layout */}
-              <circle cx={layout.entrance.x} cy={layout.entrance.y} r="6" fill="#3b82f6" stroke="#ffffff" strokeWidth="2" />
-              <text x={layout.entrance.x} y={layout.entrance.y + 15} fill="#60a5fa" fontSize="8" fontWeight="bold" textAnchor="middle">INICIO</text>
+              {/* ── Entrance dot ── */}
+              <circle cx={layout.entrance.x} cy={layout.entrance.y} r="5" fill="#3b82f6" stroke="#ffffff" strokeWidth="1.5"
+                style={{ filter: 'drop-shadow(0 0 6px #3b82f6)' }} />
 
-              <circle cx={layout.checkout.x} cy={layout.checkout.y} r="6" fill="#ef4444" stroke="#ffffff" strokeWidth="2" />
-              <text x={layout.checkout.x} y={layout.checkout.y + 15} fill="#f87171" fontSize="8" fontWeight="bold" textAnchor="middle">CAJA</text>
+              {/* ── Checkout dot ── */}
+              <circle cx={layout.checkout.x} cy={layout.checkout.y} r="5" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5"
+                style={{ filter: 'drop-shadow(0 0 6px #ef4444)' }} />
 
             </svg>
           </div>

@@ -31,8 +31,8 @@
 
 /* Custom keyframes for smoother UI */
 @keyframes slideDown {
-  from { opacity: 0; transform: translate(-50%, -20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @keyframes pulseGlow {
   0%, 100% { box-shadow: 0 0 15px rgba(20, 184, 166, 0.4); }

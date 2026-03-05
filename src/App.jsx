@@ -1,42 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   Mic, Camera, Search, Trash2, MapPin, ShoppingCart,
-  ListOrdered, Smartphone, Zap, Check, Star, Navigation,
-  Maximize2, X
+  ListOrdered, Plus, Zap, Check, Star, Navigation,
+  Maximize2, X, ChevronRight
 } from 'lucide-react';
 import './index.css';
+import { MOCK_PRODUCTS } from './data/products.js';
+import { STORE_LAYOUTS } from './data/storeLayouts.js';
 
-// --- BASE DE DATOS MOCK ---
-const MOCK_PRODUCTS = [
-  { id: 1, name: 'Plátanos', section: 'Fruta', prices: { SuperA: 1.50, SuperB: 1.60, SuperC: 1.40 }, offer: null, x: 25, y: 150 },
-  { id: 2, name: 'Manzanas', section: 'Fruta', prices: { SuperA: 2.10, SuperB: 1.90, SuperC: 2.20 }, offer: { store: 'SuperB', desc: 'Oferta -10%' }, x: 35, y: 120 },
-  { id: 3, name: 'Naranjas', section: 'Fruta', prices: { SuperA: 1.80, SuperB: 1.85, SuperC: 1.70 }, offer: null, x: 25, y: 90 },
-  { id: 4, name: 'Pan de molde', section: 'Pan', prices: { SuperA: 1.20, SuperB: 1.30, SuperC: 1.15 }, offer: null, x: 95, y: 60 },
-  { id: 5, name: 'Baguette', section: 'Pan', prices: { SuperA: 0.90, SuperB: 0.85, SuperC: 1.00 }, offer: null, x: 125, y: 60 },
-  { id: 6, name: 'Leche', section: 'Lácteos', prices: { SuperA: 0.95, SuperB: 0.90, SuperC: 1.10 }, offer: { store: 'SuperA', desc: 'Oferta 3x2' }, x: 185, y: 200 },
-  { id: 7, name: 'Yogur', section: 'Lácteos', prices: { SuperA: 1.40, SuperB: 1.50, SuperC: 1.35 }, offer: null, x: 215, y: 200 },
-  { id: 8, name: 'Queso', section: 'Lácteos', prices: { SuperA: 3.20, SuperB: 3.50, SuperC: 3.00 }, offer: null, x: 185, y: 250 },
-  { id: 9, name: 'Pollo', section: 'Carnicería', prices: { SuperA: 5.50, SuperB: 6.00, SuperC: 5.20 }, offer: null, x: 95, y: 280 },
-  { id: 10, name: 'Ternera', section: 'Carnicería', prices: { SuperA: 8.90, SuperB: 8.50, SuperC: 9.00 }, offer: null, x: 125, y: 280 },
-  { id: 11, name: 'Champú', section: 'Higiene', prices: { SuperA: 2.50, SuperB: 2.40, SuperC: 2.80 }, offer: null, x: 275, y: 120 },
-  { id: 12, name: 'Gel', section: 'Higiene', prices: { SuperA: 1.80, SuperB: 1.90, SuperC: 1.75 }, offer: null, x: 275, y: 150 },
-  { id: 13, name: 'Papel higiénico', section: 'Higiene', prices: { SuperA: 3.50, SuperB: 3.20, SuperC: 3.80 }, offer: { store: 'SuperB', desc: 'Oferta Especial' }, x: 275, y: 180 },
-  { id: 14, name: 'Arroz', section: 'Despensa', prices: { SuperA: 1.10, SuperB: 1.00, SuperC: 1.20 }, offer: null, x: 105, y: 140 },
-  { id: 15, name: 'Pasta', section: 'Despensa', prices: { SuperA: 0.85, SuperB: 0.90, SuperC: 0.80 }, offer: null, x: 115, y: 180 },
-  { id: 16, name: 'Tomate frito', section: 'Despensa', prices: { SuperA: 0.60, SuperB: 0.55, SuperC: 0.65 }, offer: null, x: 105, y: 220 },
-  { id: 17, name: 'Agua', section: 'Bebidas', prices: { SuperA: 0.40, SuperB: 0.45, SuperC: 0.35 }, offer: null, x: 195, y: 80 },
-  { id: 18, name: 'Refresco', section: 'Bebidas', prices: { SuperA: 1.20, SuperB: 1.15, SuperC: 1.30 }, offer: null, x: 195, y: 110 },
-  { id: 19, name: 'Cerveza', section: 'Bebidas', prices: { SuperA: 0.65, SuperB: 0.70, SuperC: 0.60 }, offer: null, x: 215, y: 140 },
-  { id: 20, name: 'Café', section: 'Despensa', prices: { SuperA: 2.80, SuperB: 2.90, SuperC: 2.70 }, offer: { store: 'SuperC', desc: 'Oferta -15%' }, x: 125, y: 160 },
-  { id: 21, name: 'Condones', section: 'Higiene', prices: { SuperA: 6.00, SuperB: 2.90, SuperC: 2.70 }, offer: { store: 'SuperC', desc: 'Oferta -15%' }, x: 275, y: 210 },
+const SECTIONS_ORDER = [
+  'Fruta', 'Verdura', 'Pan', 'Despensa', 'Snacks', 'Lácteos', 'Congelados',
+  'Carnicería', 'Pescadería', 'Charcutería', 'Bebidas', 'Higiene', 'Limpieza'
 ];
-
-const SECTIONS_ORDER = ['Entrada', 'Fruta', 'Pan', 'Despensa', 'Baguette', 'Lácteos', 'Carnicería', 'Bebidas', 'Higiene', 'Caja'];
-
-const SECTION_COORDS = {
-  'Entrada': { x: 150, y: 330 }, // Placed entrance at bottom center conceptually
-  'Caja': { x: 50, y: 330 } // Placed checkout bottom left conceptually
-};
 
 export default function App() {
   const [view, setView] = useState('home');
@@ -47,6 +22,10 @@ export default function App() {
   const [showWizardPanel, setShowWizardPanel] = useState(false);
   const [animatingItem, setAnimatingItem] = useState(null);
   const [manualSearch, setManualSearch] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [voiceMatches, setVoiceMatches] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedStore, setSelectedStore] = useState('SuperA');
   const [isFullScreenMap, setIsFullScreenMap] = useState(false);
 
@@ -65,32 +44,47 @@ export default function App() {
   };
 
   // --- INTERACCIONES ---
+  const addProductToCart = (product) => {
+    if (cart.find(item => item.id === product.id)) {
+      showFeedback(`"${product.name}" ya está en tu lista.`);
+      return;
+    }
+    setCart(prev => [...prev, { ...product, priority: false, checked: false }]);
+    setAnimatingItem(product.id);
+    setTimeout(() => setAnimatingItem(null), 600);
+    triggerVibration([80]);
+    showFeedback(`✅ Añadido: ${product.name}`);
+  };
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setManualSearch(val);
+    if (val.trim().length < 2) {
+      setSearchSuggestions([]);
+      return;
+    }
+    const lower = val.toLowerCase();
+    const matches = MOCK_PRODUCTS.filter(p =>
+      p.name.toLowerCase().includes(lower) && !cart.find(c => c.id === p.id)
+    ).slice(0, 7);
+    setSearchSuggestions(matches);
+  };
+
   const handleManualSearch = (e) => {
     e.preventDefault();
     if (!manualSearch.trim()) return;
-
-    const text = manualSearch.toLowerCase();
-    let added = 0;
-    let lastAddedId = null;
-
-    MOCK_PRODUCTS.forEach(product => {
-      if (text.includes(product.name.toLowerCase()) && !cart.find(item => item.id === product.id)) {
-        setCart(prev => [...prev, { ...product, priority: false, checked: false }]);
-        added++;
-        lastAddedId = product.id;
-      }
-    });
-
-    if (added > 0) {
-      triggerVibration([100]);
-      showFeedback(`Añadido: ${manualSearch}`);
-      if (added === 1 && lastAddedId) setAnimatingItem(lastAddedId);
-      setTimeout(() => setAnimatingItem(null), 500);
+    if (searchSuggestions.length === 1) {
+      addProductToCart(searchSuggestions[0]);
+    } else if (searchSuggestions.length > 1) {
+      // Pick the closest match (exact name match preferred)
+      const exact = searchSuggestions.find(p => p.name.toLowerCase() === manualSearch.toLowerCase());
+      addProductToCart(exact || searchSuggestions[0]);
     } else {
       triggerVibration([50, 50]);
-      showFeedback(`No se encontró o ya está en lista: ${manualSearch}`);
+      showFeedback(`No se encontró: "${manualSearch}"`);
     }
     setManualSearch('');
+    setSearchSuggestions([]);
   };
 
   const handleVoiceInput = () => {
@@ -106,23 +100,41 @@ export default function App() {
 
     recognition.onresult = (event) => {
       const text = event.results[0][0].transcript.toLowerCase();
-      let added = 0;
-      let lastAddedId = null;
-      MOCK_PRODUCTS.forEach(product => {
-        if (text.includes(product.name.toLowerCase()) && !cart.find(item => item.id === product.id)) {
-          setCart(prev => [...prev, { ...product, priority: false, checked: false }]);
-          added++;
-          lastAddedId = product.id;
-        }
-      });
       setIsListening(false);
-      triggerVibration([100, 50, 100]);
-      if (added > 0) {
-        showFeedback(`¡Perfecto! Añadidos ${added} productos.`);
-        if (added === 1 && lastAddedId) setAnimatingItem(lastAddedId);
-        setTimeout(() => setAnimatingItem(null), 500);
+      triggerVibration([80, 40, 80]);
+
+      // Find all products whose name appears in the spoken text
+      const words = text.split(/\s+/);
+      const directMatches = MOCK_PRODUCTS.filter(p => {
+        const nameLower = p.name.toLowerCase();
+        return text.includes(nameLower) && !cart.find(c => c.id === p.id);
+      });
+
+      if (directMatches.length === 1) {
+        // Single exact match — add directly
+        addProductToCart(directMatches[0]);
+        return;
+      }
+
+      if (directMatches.length > 1) {
+        // Multiple direct matches — show popup to disambiguate
+        setVoiceMatches(directMatches);
+        return;
+      }
+
+      // No direct match — try keyword search across all products
+      const fuzzy = MOCK_PRODUCTS.filter(p => {
+        const nameLower = p.name.toLowerCase();
+        return words.some(w => w.length > 3 && nameLower.includes(w)) &&
+          !cart.find(c => c.id === p.id);
+      }).slice(0, 8);
+
+      if (fuzzy.length === 1) {
+        addProductToCart(fuzzy[0]);
+      } else if (fuzzy.length > 1) {
+        setVoiceMatches(fuzzy);
       } else {
-        showFeedback(`No entendí "${text}" o ya está en la lista.`);
+        showFeedback(`No encontré "${text}" en los productos.`);
       }
     };
     recognition.onerror = () => {
@@ -214,8 +226,6 @@ export default function App() {
 
   const renderHome = () => (
     <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-10 animate-fade-in bg-gray-50 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] relative overflow-hidden">
-
-      {/* Decorative background blurs */}
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-teal-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
 
@@ -230,7 +240,7 @@ export default function App() {
         <p className="text-gray-500 text-lg font-medium tracking-wide">Smart Shopping. Smart Savings.</p>
       </div>
 
-      <div className="glass-effect p-6 rounded-[2rem] w-full max-w-sm space-y-4 relative z-10 transition-all">
+      <div className="glass-effect p-6 rounded-[2rem] w-full max-w-sm relative z-10">
         <button
           onClick={() => setView('list')}
           className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 hover:bg-black transition-all transform active:scale-[0.98] shadow-lg shadow-gray-900/30"
@@ -238,30 +248,23 @@ export default function App() {
           <ListOrdered className="w-6 h-6" />
           Preparar la Lista
         </button>
-        <button
-          onClick={simulateGeofence}
-          className="w-full bg-teal-50 text-teal-700 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 hover:bg-teal-100 transition-all transform active:scale-[0.98] border border-teal-200"
-        >
-          <MapPin className="w-6 h-6" />
-          Usar mi Ubicación GPS
-        </button>
-        <button
-          onClick={() => showFeedback("📝 Analizando compras pasadas...")}
-          className="w-full bg-white text-gray-600 py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition-all transform active:scale-[0.98] border border-gray-200 mt-2"
-        >
-          <Camera className="w-5 h-5" />
-          Escanear Ticket Antiguo
-        </button>
       </div>
     </div>
   );
 
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setSelectedCategory(null);
+    setManualSearch('');
+    setSearchSuggestions([]);
+  };
+
   const renderList = () => (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden animate-fade-in w-full max-w-full">
 
-      {/* Header Premium */}
-      <div className="flex-shrink-0 premium-gradient text-white p-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-[0_10px_30px_rgba(20,184,166,0.3)] z-10 relative">
-        <div className="flex justify-between items-center mb-4">
+      {/* Header — title + count only */}
+      <div className="flex-shrink-0 premium-gradient text-white px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-[0_10px_30px_rgba(20,184,166,0.3)] z-10 relative">
+        <div className="flex justify-between items-center">
           <div className="min-w-0 pr-4">
             <h2 className="text-3xl font-black tracking-tight drop-shadow-sm truncate">Mi Lista</h2>
             <p className="text-emerald-100 text-xs font-bold mt-1 uppercase tracking-wider truncate">
@@ -271,43 +274,6 @@ export default function App() {
           <span className="bg-white/20 px-4 py-1.5 rounded-full text-sm font-bold backdrop-blur-sm border border-white/30 whitespace-nowrap shrink-0 shadow-inner">
             {cart.length} items
           </span>
-        </div>
-
-        {/* Search / Input Area */}
-        <form onSubmit={handleManualSearch} className="relative mb-4">
-          <input
-            type="text"
-            placeholder="Añadir producto..."
-            className="w-full bg-white/20 border border-white/30 text-white placeholder-white/70 rounded-2xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md transition-all shadow-inner"
-            value={manualSearch}
-            onChange={(e) => setManualSearch(e.target.value)}
-          />
-          <Search className="absolute left-3 top-3.5 w-5 h-5 text-white/70" />
-          {manualSearch && (
-            <button type="submit" className="absolute right-2 top-2 bg-white text-emerald-600 p-1.5 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform">
-              Add
-            </button>
-          )}
-        </form>
-
-        <div className="flex gap-3">
-          <button
-            onClick={handleVoiceInput}
-            className={`flex-1 py-3 px-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-all transform active:scale-95 shadow-lg ${isListening
-              ? 'bg-red-500 text-white animate-pulse shadow-red-500/50'
-              : 'bg-white/20 text-white hover:bg-white/30 border border-white/20'
-              }`}
-          >
-            <Mic className={`w-5 h-5 flex-shrink-0 ${isListening ? 'animate-bounce' : ''}`} />
-            <span className="truncate">{isListening ? 'Escuchando' : 'Voz'}</span>
-          </button>
-          <button
-            onClick={handleCameraMock}
-            className="flex-1 py-3 px-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-all transform active:scale-95 shadow-lg bg-white/20 text-white hover:bg-white/30 border border-white/20"
-          >
-            <Camera className="w-5 h-5 flex-shrink-0" />
-            <span className="truncate">Cámara</span>
-          </button>
         </div>
       </div>
 
@@ -319,60 +285,41 @@ export default function App() {
               <ShoppingCart className="w-12 h-12 text-gray-400" />
             </div>
             <p className="text-xl font-bold text-gray-600">Tu cesta está vacía</p>
-            <p className="text-sm mt-2">Usa la voz o escanea productos para empezar.</p>
+            <p className="text-sm mt-2">Pulsa el botón <strong>+</strong> para añadir productos.</p>
           </div>
         ) : (
           displayedCart.map(item => {
             let touchStartX = null;
             let currentTranslateX = 0;
-
-            const onTouchStartSwipe = (e) => {
-              touchStartX = e.touches[0].clientX;
-              handleTouchStart(item.id);
-            };
-
+            const onTouchStartSwipe = (e) => { touchStartX = e.touches[0].clientX; handleTouchStart(item.id); };
             const onTouchMoveSwipe = (e) => {
               if (touchStartX === null) return;
-              const currentX = e.touches[0].clientX;
-              const diffX = currentX - touchStartX;
-
-              // Only allow swiping left to delete
+              const diffX = e.touches[0].clientX - touchStartX;
               if (diffX < 0) {
                 currentTranslateX = Math.max(diffX, -100);
                 e.currentTarget.style.transform = `translateX(${currentTranslateX}px)`;
-                if (currentTranslateX < -60) {
-                  e.currentTarget.style.opacity = '0.5';
-                }
+                if (currentTranslateX < -60) e.currentTarget.style.opacity = '0.5';
               }
             };
-
             const onTouchEndSwipe = (e) => {
               handleTouchEnd();
               touchStartX = null;
               if (currentTranslateX <= -80) {
-                // Trigger delete
                 triggerVibration([100, 100]);
                 handleRemove(item.id);
                 showFeedback("🌪️ ¡Deslizado! Producto borrado.");
               } else {
-                // Reset position
                 e.currentTarget.style.transform = 'translateX(0px)';
                 e.currentTarget.style.opacity = '1';
               }
               currentTranslateX = 0;
             };
-
             return (
               <div
                 key={item.id}
                 className={`relative flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border transition-all duration-300 transform ${animatingItem === item.id ? 'scale-[1.03] shadow-lg ring-2 ring-emerald-400 border-none' : ''
-                  } ${item.priority
-                    ? 'border-yellow-300 bg-yellow-50/50'
-                    : 'border-gray-200 hover:shadow-md'
-                  }`}
-                style={{
-                  background: item.priority ? 'linear-gradient(135deg, #fefce8 0%, #ffffff 100%)' : 'white',
-                }}
+                  } ${item.priority ? 'border-yellow-300 bg-yellow-50/50' : 'border-gray-200 hover:shadow-md'}`}
+                style={{ background: item.priority ? 'linear-gradient(135deg, #fefce8 0%, #ffffff 100%)' : 'white' }}
                 onMouseDown={() => handleTouchStart(item.id)}
                 onMouseUp={handleTouchEnd}
                 onMouseLeave={handleTouchEnd}
@@ -380,11 +327,9 @@ export default function App() {
                 onTouchMove={onTouchMoveSwipe}
                 onTouchEnd={onTouchEndSwipe}
               >
-                {/* Background delete indicator visible when swiping left */}
                 <div className="absolute inset-y-0 right-0 -z-10 bg-red-500 rounded-2xl flex justify-end items-center pr-5 w-full opacity-0 pointer-events-none" style={{ opacity: currentTranslateX < -20 ? 1 : 0 }}>
                   <Trash2 className="w-6 h-6 text-white animate-pulse" />
                 </div>
-
                 <div className="flex items-center gap-4 min-w-0 bg-white" style={{ background: 'inherit' }}>
                   <div className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${item.priority ? 'bg-yellow-400 shadow-yellow-400/50' : 'bg-gray-200'}`}></div>
                   <div className="min-w-0">
@@ -405,16 +350,199 @@ export default function App() {
         )}
       </div>
 
-      {/* Sticky Bottom Action */}
-      {cart.length > 0 && (
-        <div className="flex-shrink-0 p-5 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-8 z-20 w-full">
+      {/* Sticky Bottom — compare + FAB */}
+      <div className="flex-shrink-0 px-5 pb-5 pt-4 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent z-20 w-full flex items-center gap-3">
+        {cart.length > 0 && (
           <button
             onClick={() => setView('compare')}
-            className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all transform active:scale-95 text-lg"
+            className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl hover:bg-black transition-all transform active:scale-95"
           >
-            <Search className="w-6 h-6 shrink-0" />
+            <Search className="w-5 h-5 shrink-0" />
             <span className="truncate">Comparar Precios</span>
           </button>
+        )}
+        {/* FAB: Añadir productos */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="w-14 h-14 shrink-0 premium-gradient rounded-2xl flex items-center justify-center shadow-xl active:scale-90 transition-transform"
+        >
+          <Plus className="w-7 h-7 text-white" strokeWidth={3} />
+        </button>
+      </div>
+
+      {/* 🛒 Add Products Modal */}
+      {showAddModal && (
+        <div className="absolute inset-0 z-[200] flex flex-col bg-gray-50 animate-fade-in">
+          {/* Modal Header */}
+          <div className="flex-shrink-0 premium-gradient text-white px-6 pt-10 pb-5 rounded-b-[2rem] shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-[10px] font-black text-emerald-100 uppercase tracking-[0.2em]">Añadir productos</p>
+                <h3 className="text-2xl font-black text-white">Buscar</h3>
+              </div>
+              <button onClick={closeAddModal} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center border border-white/20 active:scale-90 transition-transform">
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* Search + Autocomplete */}
+            <form onSubmit={handleManualSearch} className="relative">
+              <input
+                type="text"
+                placeholder="Buscar producto..."
+                autoComplete="off"
+                autoFocus
+                className="w-full bg-white/20 border border-white/30 text-white placeholder-white/70 rounded-2xl py-3 pl-10 pr-16 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md transition-all shadow-inner"
+                value={manualSearch}
+                onChange={handleSearchChange}
+              />
+              <Search className="absolute left-3 top-3.5 w-5 h-5 text-white/70" />
+              <div className="absolute right-2 top-1.5 flex gap-1">
+                <button
+                  type="button"
+                  onClick={handleVoiceInput}
+                  className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-white/20 hover:bg-white/30'
+                    }`}
+                >
+                  <Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} />
+                </button>
+                <button type="button" onClick={handleCameraMock} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-all">
+                  <Camera className="w-4 h-4 text-white" />
+                </button>
+              </div>
+
+              {/* Autocomplete suggestions */}
+              {searchSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-50 border border-gray-100">
+                  {searchSuggestions.map((product, i) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => { addProductToCart(product); setManualSearch(''); setSearchSuggestions([]); }}
+                      className={`w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left ${i < searchSuggestions.length - 1 ? 'border-b border-gray-100' : ''
+                        }`}
+                    >
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{product.name}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{product.section}</p>
+                      </div>
+                      <span className="text-emerald-600 font-black text-sm shrink-0 ml-3">{product.prices.SuperA.toFixed(2)}€</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* Body: Category browser or product list */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide">
+            {selectedCategory === null ? (
+              // Category grid
+              <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Explorar por categoría</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {SECTIONS_ORDER.map(cat => {
+                    const count = MOCK_PRODUCTS.filter(p => p.section === cat && !cart.find(c => c.id === p.id)).length;
+                    const emoji = {
+                      Fruta: '🍎', Verdura: '🥦', Pan: '🍞', Despensa: '🫙', Snacks: '🍿',
+                      Lácteos: '🥛', Congelados: '❄️', Carnicería: '🥩', Pescadería: '🐟', Charctuería: '🧆',
+                      Charcutería: '🧆', Bebidas: '🥤', Higiene: '🧼', Limpieza: '🧹'
+                    }[cat] || '🛒';
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.97] transition-all"
+                      >
+                        <div className="text-left">
+                          <span className="text-2xl">{emoji}</span>
+                          <p className="font-black text-gray-800 text-sm mt-1">{cat}</p>
+                          <p className="text-[10px] text-gray-400 font-semibold">{count} disponibles</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              // Products in selected category
+              <div>
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="flex items-center gap-2 text-emerald-600 font-bold text-sm mb-4 active:opacity-70"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" /> Volver
+                </button>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{selectedCategory}</p>
+                <div className="space-y-2">
+                  {MOCK_PRODUCTS.filter(p => p.section === selectedCategory).map(product => {
+                    const inCart = !!cart.find(c => c.id === product.id);
+                    return (
+                      <button
+                        key={product.id}
+                        onClick={() => !inCart && addProductToCart(product)}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart
+                            ? 'bg-emerald-50 border-emerald-200 opacity-60'
+                            : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'
+                          }`}
+                      >
+                        <div className="text-left min-w-0">
+                          <p className={`font-bold text-sm truncate ${inCart ? 'text-emerald-700 line-through' : 'text-gray-900'}`}>{product.name}</p>
+                          {product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}
+                        </div>
+                        <div className="text-right shrink-0 pl-3 flex items-center gap-2">
+                          <span className="font-black text-sm text-gray-800">{product.prices.SuperA.toFixed(2)}€</span>
+                          {inCart
+                            ? <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                            : <Plus className="w-4 h-4 text-emerald-500" strokeWidth={3} />
+                          }
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 🎤 Voice Disambiguation Popup */}
+      {voiceMatches && (
+        <div className="absolute inset-0 z-[200] flex flex-col bg-gray-950/95 backdrop-blur-md animate-fade-in">
+          <div className="flex items-center justify-between px-6 pt-10 pb-4 border-b border-white/10">
+            <div>
+              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">🎤 ¿Cuál de estos?</p>
+              <h3 className="text-xl font-black text-white mt-1">Selecciona el producto</h3>
+            </div>
+            <button onClick={() => setVoiceMatches(null)} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white border border-white/10 active:scale-90 transition-transform">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 scrollbar-hide">
+            {voiceMatches.map(product => (
+              <button
+                key={product.id}
+                onClick={() => { addProductToCart(product); setVoiceMatches(null); }}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between active:scale-[0.97] transition-all hover:bg-white/10 hover:border-emerald-500/50"
+              >
+                <div className="text-left">
+                  <p className="font-black text-white text-base">{product.name}</p>
+                  <p className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold mt-0.5">{product.section}</p>
+                </div>
+                <div className="text-right shrink-0 pl-4">
+                  <p className="text-lg font-black text-white">{product.prices.SuperA.toFixed(2)}€</p>
+                  {product.offer && <p className="text-[9px] text-yellow-400 font-bold">{product.offer.desc}</p>}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="px-5 pb-6 pt-3 border-t border-white/10">
+            <button onClick={() => setVoiceMatches(null)} className="w-full py-3.5 rounded-2xl bg-white/10 text-white font-bold text-sm border border-white/10 active:scale-95 transition-transform">
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -480,13 +608,21 @@ export default function App() {
   );
 
   const renderStoreMode = () => {
-    // --- PATHFINDING Y ROUTING ---
+    // --- PATHFINDING Y ROUTING (layout-aware) ---
+    const layout = STORE_LAYOUTS[selectedStore];
+    const aisleXPositions = layout.aisleXPositions;
+    const startPoint = { ...layout.entrance, id: 'start' };
+    const endPoint = { ...layout.checkout, id: 'end' };
+
     const getAisleX = (x) => {
-      if (x < 55) return 25;
-      if (x < 115) return 85;
-      if (x < 175) return 145;
-      if (x < 235) return 205;
-      return 265;
+      // Snap to nearest aisle in the active store layout
+      let best = aisleXPositions[0];
+      let bestDist = Math.abs(x - best);
+      for (const ax of aisleXPositions) {
+        const d = Math.abs(x - ax);
+        if (d < bestDist) { bestDist = d; best = ax; }
+      }
+      return best;
     };
 
     const getPathDistance = (pA, pB) => {
@@ -504,9 +640,7 @@ export default function App() {
       const aisleA = getAisleX(pA.x);
       const aisleB = getAisleX(pB.x);
       const segments = [pA];
-
       if (pA.x !== aisleA) segments.push({ x: aisleA, y: pA.y });
-
       if (aisleA !== aisleB) {
         const distTop = (pA.y - 50) + Math.abs(aisleA - aisleB) + (pB.y - 50);
         const distBot = (270 - pA.y) + Math.abs(aisleA - aisleB) + (270 - pB.y);
@@ -518,19 +652,19 @@ export default function App() {
           segments.push({ x: aisleB, y: 270 });
         }
       }
-
       if (pB.x !== aisleB) segments.push({ x: aisleB, y: pB.y });
       segments.push(pB);
       return segments;
     };
 
-    // 1. Filtrar productos
-    const itemsWithCoords = cart.filter(i => i.x && i.y);
+    // 1. Enrich cart items with per-store coords from product data
+    const itemsWithCoords = cart.map(cartItem => {
+      const product = MOCK_PRODUCTS.find(p => p.id === cartItem.id);
+      const storeCoords = product?.coords?.[selectedStore];
+      return storeCoords ? { ...cartItem, x: storeCoords.x, y: storeCoords.y } : null;
+    }).filter(Boolean);
 
     // 2. Ruta Óptima TSP (Greedy Nearest Neighbor)
-    const startPoint = { ...SECTION_COORDS['Entrada'], id: 'start' };
-    const endPoint = { ...SECTION_COORDS['Caja'], id: 'end' };
-
     let unvisited = [...itemsWithCoords];
     const optimalOrder = [];
     let current = startPoint;
@@ -547,7 +681,7 @@ export default function App() {
       unvisited.splice(nearestIdx, 1);
     }
 
-    // 3. Generar segmentos de línea SVG esquivando pasillos
+    // 3. Generar segmentos SVG
     const completedItems = optimalOrder.filter(i => i.checked);
     const pendingItems = optimalOrder.filter(i => !i.checked);
 
@@ -615,8 +749,8 @@ export default function App() {
           </div>
 
           <div className="w-full h-full flex justify-center items-center transition-all duration-700" style={{ height: isFullScreenMap ? '100%' : '22vh' }}>
-            <svg viewBox="0 0 300 350" className="w-full h-full drop-shadow-[0_0_15px_rgba(16,185,129,0.15)]" preserveAspectRatio="xMidYMid meet">
-              {/* Grid Pattern Background for a technical look */}
+            <svg viewBox={layout.viewBox} className="w-full h-full drop-shadow-[0_0_15px_rgba(16,185,129,0.15)]" preserveAspectRatio="xMidYMid meet">
+              {/* Grid Pattern Background */}
               <defs>
                 <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
                   <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" strokeWidth="0.5" opacity="0.03" />
@@ -624,21 +758,23 @@ export default function App() {
               </defs>
               <rect width="100%" height="100%" fill="url(#grid)" />
 
-              {/* Store Shelves / Aisles - Realistic Layout */}
-              <g stroke="#4b5563" strokeWidth="1.5" fill="#1f2937" opacity="0.9" rx="6">
-                {/* Outer walls / Back section */}
-                <rect x="10" y="20" width="280" height="20" rx="4" />
-
-                {/* Vertical Aisles */}
-                <rect x="40" y="60" width="30" height="200" rx="4" />
-                <rect x="100" y="60" width="30" height="200" rx="4" />
-                <rect x="160" y="60" width="30" height="200" rx="4" />
-                <rect x="220" y="60" width="30" height="200" rx="4" />
-
-                {/* Checkout area */}
-                <rect x="40" y="280" width="80" height="20" rx="4" fill="#374151" />
-                <rect x="180" y="280" width="80" height="20" rx="4" fill="#374151" />
+              {/* Dynamic store shelves from layout config */}
+              <g stroke="#4b5563" strokeWidth="1.5" opacity="0.9">
+                {layout.shelves.map((shelf, i) => (
+                  <rect
+                    key={i}
+                    x={shelf.x} y={shelf.y}
+                    width={shelf.width} height={shelf.height}
+                    rx="4"
+                    fill={shelf.accent ? '#374151' : '#1f2937'}
+                  />
+                ))}
               </g>
+
+              {/* Section labels */}
+              {layout.sectionLabels?.map((lbl, i) => (
+                <text key={i} x={lbl.x} y={lbl.y} fill="#6b7280" fontSize="7" fontWeight="700" textAnchor="start">{lbl.label}</text>
+              ))}
 
               {/* Glowing optimized path */}
               {routeSegments.length > 1 && (
@@ -657,13 +793,11 @@ export default function App() {
 
               <style dangerouslySetInnerHTML={{ __html: `@keyframes dash { to { stroke-dashoffset: -16; } }` }} />
 
-              {/* Render Specific Product Coordinates for items in cart */}
-              {optimalOrder.map((item, idx) => {
+              {/* Product pins */}
+              {optimalOrder.map((item) => {
                 if (!item.x || !item.y) return null;
                 const isPending = !item.checked;
-                // Identify the "Next" item as the first pending item in the sorted list
                 const isNext = optimalOrder.find(i => !i.checked)?.id === item.id;
-
                 return (
                   <g key={item.id} className="transition-all duration-500">
                     {isNext && (
@@ -673,8 +807,7 @@ export default function App() {
                       </circle>
                     )}
                     <circle
-                      cx={item.x}
-                      cy={item.y}
+                      cx={item.x} cy={item.y}
                       r={isNext ? 8 : (isPending ? 6 : 4)}
                       fill={isNext ? "#34d399" : (isPending ? "#10B981" : "#374151")}
                       stroke={isNext ? "#ffffff" : "#111827"}
@@ -685,7 +818,7 @@ export default function App() {
                     {isNext && (
                       <g className="pointer-events-none">
                         <rect x={item.x - 20} y={item.y - 35} width="40" height="18" rx="4" fill="#10b981" />
-                        <text x={item.x} y={item.y - 23} fill="white" fontSize="8" fontWeight="900" textAnchor="middle" className="uppercase font-black tracking-tighter">AQUÍ</text>
+                        <text x={item.x} y={item.y - 23} fill="white" fontSize="8" fontWeight="900" textAnchor="middle">AQUÍ</text>
                         <path d={`M ${item.x - 4} ${item.y - 17} L ${item.x + 4} ${item.y - 17} L ${item.x} ${item.y - 10} Z`} fill="#10b981" />
                       </g>
                     )}
@@ -693,12 +826,12 @@ export default function App() {
                 );
               })}
 
-              {/* Entrance and Exit points */}
-              <circle cx={SECTION_COORDS['Entrada'].x} cy={SECTION_COORDS['Entrada'].y} r="6" fill="#3b82f6" stroke="#ffffff" strokeWidth="2" />
-              <text x={SECTION_COORDS['Entrada'].x} y={SECTION_COORDS['Entrada'].y + 15} fill="#60a5fa" fontSize="8" fontWeight="bold" textAnchor="middle">INICIO</text>
+              {/* Entrance and Checkout from layout */}
+              <circle cx={layout.entrance.x} cy={layout.entrance.y} r="6" fill="#3b82f6" stroke="#ffffff" strokeWidth="2" />
+              <text x={layout.entrance.x} y={layout.entrance.y + 15} fill="#60a5fa" fontSize="8" fontWeight="bold" textAnchor="middle">INICIO</text>
 
-              <circle cx={SECTION_COORDS['Caja'].x} cy={SECTION_COORDS['Caja'].y} r="6" fill="#ef4444" stroke="#ffffff" strokeWidth="2" />
-              <text x={SECTION_COORDS['Caja'].x} y={SECTION_COORDS['Caja'].y + 15} fill="#f87171" fontSize="8" fontWeight="bold" textAnchor="middle">CAJA</text>
+              <circle cx={layout.checkout.x} cy={layout.checkout.y} r="6" fill="#ef4444" stroke="#ffffff" strokeWidth="2" />
+              <text x={layout.checkout.x} y={layout.checkout.y + 15} fill="#f87171" fontSize="8" fontWeight="bold" textAnchor="middle">CAJA</text>
 
             </svg>
           </div>
@@ -799,8 +932,9 @@ export default function App() {
 
       {/* Toast Notification Premium */}
       {feedbackMsg && (
-        <div className="absolute top-10 w-full px-4 z-50 flex justify-center animate-slide-down pointer-events-none">
-          <div className="bg-gray-900/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.3)] border border-gray-700 font-bold text-sm text-center">
+        <div className="absolute top-6 left-0 right-0 px-6 z-[100] flex justify-center animate-slide-down pointer-events-none">
+          <div className="glass-dark text-white px-5 py-2.5 rounded-2xl shadow-2xl border border-white/10 font-bold text-xs text-center flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-yellow-400 fill-current" />
             {feedbackMsg}
           </div>
         </div>
@@ -837,40 +971,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Floating Action Menu (Mago de Oz) */}
-      {!isFullScreenMap && (
-        <div className={`absolute bottom-24 right-5 flex flex-col items-end gap-3 z-50 transition-transform duration-500 ease-in-out ${showWizardPanel ? 'translate-x-[0px]' : 'translate-x-[calc(100%+30px)]'}`}>
-          <div className="relative group">
-            <button
-              onClick={() => setShowWizardPanel(!showWizardPanel)}
-              className="absolute right-[calc(100%+15px)] bottom-0 w-12 h-12 bg-purple-600 text-white rounded-full shadow-2xl flex items-center justify-center transform hover:scale-105 active:scale-95 transition-all outline-none ring-4 ring-purple-100 group-hover:bg-purple-700"
-              style={{ transform: !showWizardPanel ? 'translateX(0)' : 'translateX(60px) scale(0)', opacity: !showWizardPanel ? 1 : 0 }}
-            >
-              <Smartphone className="w-6 h-6 animate-pulse" />
-            </button>
-          </div>
-
-          {showWizardPanel && (
-            <div className="absolute right-0 bottom-0 max-w-[200px] animate-fade-in origin-bottom-right drop-shadow-2xl">
-              <div className="bg-white/95 backdrop-blur-xl p-4 rounded-[2rem] border border-purple-100/50 flex flex-col gap-2 w-56 transform translate-y-0">
-                <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-1">
-                  <p className="text-xs font-black text-purple-800 uppercase tracking-wide">Mago de Oz</p>
-                  <button onClick={() => setShowWizardPanel(false)} className="text-gray-400 hover:text-gray-800 bg-gray-100 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">X</button>
-                </div>
-                <button onClick={() => { simulateGeofence(); setShowWizardPanel(false); }} className="text-left px-3 py-2.5 hover:bg-purple-50 rounded-xl flex items-center gap-3 transition-colors text-sm font-bold text-gray-700">
-                  <MapPin className="w-4 h-4 text-purple-600" /> Llegar (GPS)
-                </button>
-                <button onClick={() => {
-                  showFeedback("📜 Abriendo historial de compras...");
-                  setShowWizardPanel(false);
-                }} className="text-left px-3 py-2.5 hover:bg-purple-50 rounded-xl flex items-center gap-3 transition-colors text-sm font-bold text-gray-700">
-                  <ListOrdered className="w-4 h-4 text-purple-600" /> Ver Historial
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

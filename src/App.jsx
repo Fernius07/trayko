@@ -7,6 +7,7 @@ import {
 import './index.css';
 import { MOCK_PRODUCTS } from './data/products.js';
 import { STORE_LAYOUTS } from './data/storeLayouts.js';
+import MapEditor from './MapEditor.jsx';
 
 const SECTIONS_ORDER = [
   'Fruta', 'Verdura', 'Pan', 'Despensa', 'Snacks', 'Lácteos', 'Congelados',
@@ -29,6 +30,8 @@ export default function App() {
   const [selectedStore, setSelectedStore] = useState('SuperA');
   const [isFullScreenMap, setIsFullScreenMap] = useState(false);
   const [showFullRoute, setShowFullRoute] = useState(false);
+  // [TEMP] Map Design Editor
+  const [showMapEditor, setShowMapEditor] = useState(false);
 
   const pressTimer = useRef(null);
 
@@ -592,15 +595,16 @@ export default function App() {
                 </p>
               )}
 
-              {isBest && (
-                <button
-                  onClick={() => simulateGeofence(storeData.store)}
-                  className="mt-6 w-full premium-gradient text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
-                >
-                  <Navigation className="w-5 h-5 shrink-0" />
-                  <span className="truncate">Iniciar Ruta (GPS)</span>
-                </button>
-              )}
+              <button
+                onClick={() => simulateGeofence(storeData.store)}
+                className={`mt-6 w-full py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 transition-all active:scale-95 ${isBest
+                  ? 'premium-gradient text-white shadow-lg hover:shadow-xl'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                  }`}
+              >
+                <Navigation className={`w-5 h-5 shrink-0 ${isBest ? 'text-white' : 'text-gray-500'}`} />
+                <span className="truncate">Mostrar Mapa</span>
+              </button>
             </div>
           );
         })}
@@ -609,58 +613,109 @@ export default function App() {
   );
 
   const renderStoreMode = () => {
-    // --- PATHFINDING Y ROUTING (layout-aware) ---
+    // --- PATHFINDING Y ROUTING (Dijkstra/NavMesh) ---
     const layout = STORE_LAYOUTS[selectedStore];
-    const aisleXPositions = layout.aisleXPositions;
-    const crossYTop = layout.crossYTop;     // top horizontal corridor Y
-    const crossYBottom = layout.crossYBottom;  // bottom horizontal corridor Y
     const startPoint = { ...layout.entrance, id: 'start' };
     const endPoint = { ...layout.checkout, id: 'end' };
 
-    const getAisleX = (x) => {
-      // Snap to nearest aisle corridor in the active store layout
-      let best = aisleXPositions[0];
-      let bestDist = Math.abs(x - best);
-      for (const ax of aisleXPositions) {
-        const d = Math.abs(x - ax);
-        if (d < bestDist) { bestDist = d; best = ax; }
+    // ── GRAPH PATHFINDING ALGORITHMS (NavMesh) ──
+    const getNearestNodeId = (p) => {
+      let bestId = null;
+      let minDist = Infinity;
+      for (const [id, node] of Object.entries(layout.navNodes)) {
+        // Distancia euclidiana al cuadrado (suficiente para comparar)
+        const dist = Math.pow(p.x - node.x, 2) + Math.pow(p.y - node.y, 2);
+        if (dist < minDist) {
+          minDist = dist;
+          bestId = id;
+        }
       }
-      return best;
+      return bestId;
+    };
+
+    const getDijkstraPath = (startId, endId) => {
+      if (startId === endId) return { dist: 0, path: [startId] };
+
+      const nodes = layout.navNodes;
+      const edges = layout.navEdges;
+
+      const dists = {};
+      const prev = {};
+      const unvisited = new Set(Object.keys(nodes));
+
+      Object.keys(nodes).forEach(n => dists[n] = Infinity);
+      dists[startId] = 0;
+
+      while (unvisited.size > 0) {
+        // Encontrar nodo no visitado con menor distancia
+        let currNode = null;
+        let minDist = Infinity;
+        for (const n of unvisited) {
+          if (dists[n] < minDist) {
+            minDist = dists[n];
+            currNode = n;
+          }
+        }
+        if (currNode === null) break; // unreachable nodes left
+        if (currNode === endId) break; // Found target
+
+        unvisited.delete(currNode);
+
+        // Relax neighbors
+        if (edges[currNode]) {
+          edges[currNode].forEach(neighbor => {
+            if (unvisited.has(neighbor)) {
+              const dx = nodes[currNode].x - nodes[neighbor].x;
+              const dy = nodes[currNode].y - nodes[neighbor].y;
+              const weight = Math.sqrt(dx * dx + dy * dy);
+              const alt = dists[currNode] + weight;
+              if (alt < dists[neighbor]) {
+                dists[neighbor] = alt;
+                prev[neighbor] = currNode;
+              }
+            }
+          });
+        }
+      }
+
+      // Reconstruct path
+      const path = [];
+      let u = endId;
+      if (prev[u] !== undefined || u === startId) {
+        while (u !== undefined) {
+          path.unshift(u);
+          u = prev[u];
+        }
+      }
+
+      return { dist: dists[endId], path };
     };
 
     const getPathDistance = (pA, pB) => {
-      const aisleA = getAisleX(pA.x);
-      const aisleB = getAisleX(pB.x);
-      if (aisleA === aisleB) {
-        // Same corridor — go straight
-        return Math.abs(pA.y - pB.y) + Math.abs(pA.x - aisleA) + Math.abs(pB.x - aisleB);
-      }
-      // Need to cross via a horizontal corridor (top or bottom)
-      const distTop = (pA.y - crossYTop) + Math.abs(aisleA - aisleB) + (pB.y - crossYTop);
-      const distBot = (crossYBottom - pA.y) + Math.abs(aisleA - aisleB) + (crossYBottom - pB.y);
-      return Math.min(distTop, distBot) + Math.abs(pA.x - aisleA) + Math.abs(pB.x - aisleB);
+      const nodeA = getNearestNodeId(pA);
+      const nodeB = getNearestNodeId(pB);
+
+      // Distancia del producto al nodo A (línea recta)
+      const distAToNode = Math.sqrt(Math.pow(pA.x - layout.navNodes[nodeA].x, 2) + Math.pow(pA.y - layout.navNodes[nodeA].y, 2));
+      // Distancia del nodo B al producto B (línea recta)
+      const distNodeToB = Math.sqrt(Math.pow(pB.x - layout.navNodes[nodeB].x, 2) + Math.pow(pB.y - layout.navNodes[nodeB].y, 2));
+
+      const { dist } = getDijkstraPath(nodeA, nodeB);
+      return distAToNode + dist + distNodeToB;
     };
 
     const generatePathSegments = (pA, pB) => {
-      const aisleA = getAisleX(pA.x);
-      const aisleB = getAisleX(pB.x);
+      const nodeA = getNearestNodeId(pA);
+      const nodeB = getNearestNodeId(pB);
+
+      const { path } = getDijkstraPath(nodeA, nodeB);
+
       const segments = [pA];
-      // Move from item to nearest aisle corridor
-      if (pA.x !== aisleA) segments.push({ x: aisleA, y: pA.y });
-      if (aisleA !== aisleB) {
-        // Cross via top or bottom horizontal corridor
-        const distTop = (pA.y - crossYTop) + Math.abs(aisleA - aisleB) + (pB.y - crossYTop);
-        const distBot = (crossYBottom - pA.y) + Math.abs(aisleA - aisleB) + (crossYBottom - pB.y);
-        if (distTop < distBot) {
-          segments.push({ x: aisleA, y: crossYTop });
-          segments.push({ x: aisleB, y: crossYTop });
-        } else {
-          segments.push({ x: aisleA, y: crossYBottom });
-          segments.push({ x: aisleB, y: crossYBottom });
-        }
-      }
-      if (pB.x !== aisleB) segments.push({ x: aisleB, y: pB.y });
+      path.forEach(nodeId => {
+        segments.push(layout.navNodes[nodeId]);
+      });
       segments.push(pB);
+
       return segments;
     };
 
@@ -791,13 +846,45 @@ export default function App() {
 
           <div className="w-full h-full flex justify-center items-center transition-all duration-700" style={{ height: isFullScreenMap ? '100%' : '22vh' }}>
             <svg viewBox={layout.viewBox} className="w-full h-full drop-shadow-[0_0_15px_rgba(16,185,129,0.15)]" preserveAspectRatio="xMidYMid meet">
-              {/* Grid Pattern Background */}
+              {/* Technical Blueprint Grid Pattern */}
               <defs>
-                <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                  <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" strokeWidth="0.5" opacity="0.03" />
+                <pattern id="grid-small" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#334155" strokeWidth="0.5" opacity="0.3" />
+                </pattern>
+                <pattern id="grid-large" width="50" height="50" patternUnits="userSpaceOnUse">
+                  <rect width="50" height="50" fill="url(#grid-small)" />
+                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#475569" strokeWidth="1" opacity="0.4" />
+                </pattern>
+                {/* Gondola Shelf Hatching Pattern */}
+                <pattern id="gondola-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="#0ea5e9" strokeWidth="1.5" opacity="0.3" />
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
+              <rect width="100%" height="100%" fill="url(#grid-large)" />
+
+              {/* ── NavMesh Debug / Blueprint Routing Lines ── */}
+              <g opacity="0.1">
+                {Object.entries(layout.navEdges).map(([nodeId, neighbors]) => {
+                  const node = layout.navNodes[nodeId];
+                  return neighbors.map(neighborId => {
+                    const neighbor = layout.navNodes[neighborId];
+                    if (!node || !neighbor) return null;
+                    return (
+                      <line
+                        key={`${nodeId}-${neighborId}`}
+                        x1={node.x} y1={node.y}
+                        x2={neighbor.x} y2={neighbor.y}
+                        stroke="#38bdf8"
+                        strokeWidth="0.5"
+                        strokeDasharray="1,1"
+                      />
+                    );
+                  });
+                })}
+                {Object.entries(layout.navNodes).map(([id, node]) => (
+                  <circle key={`node-${id}`} cx={node.x} cy={node.y} r="1" fill="#38bdf8" />
+                ))}
+              </g>
 
               {/* ── Zone floor overlays (semi-transparent coloured areas) ── */}
               {layout.zones?.map((zone, i) => (
@@ -805,40 +892,103 @@ export default function App() {
                   key={`zone-${i}`}
                   x={zone.x} y={zone.y}
                   width={zone.width} height={zone.height}
-                  rx="3"
+                  rx="1"
                   fill={zone.color}
-                  opacity="0.09"
+                  opacity="0.08"
                 />
               ))}
 
-              {/* ── Shelf blocks (solid, dark) ── */}
-              <g stroke="#374151" strokeWidth="1" opacity="0.95">
-                {layout.shelves.map((shelf, i) => (
-                  <rect
-                    key={i}
-                    x={shelf.x} y={shelf.y}
-                    width={shelf.width} height={shelf.height}
-                    rx="3"
-                    fill={shelf.accent ? '#1d4ed8' : '#1e293b'}
-                    stroke={shelf.accent ? '#2563eb' : '#374151'}
-                  />
-                ))}
+              {/* ── Architectural Outer Walls ── */}
+              {layout.outerWall && (
+                <path
+                  d={layout.outerWall}
+                  fill="none"
+                  stroke="#475569"
+                  strokeWidth="4"
+                  strokeLinecap="square"
+                  strokeLinejoin="miter"
+                  style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))' }}
+                />
+              )}
+
+              {/* ── Structural Shelves & Checkouts ── */}
+              <g>
+                {layout.shelves.map((shelf, i) => {
+                  if (shelf.type === 'gondola') {
+                    // Standard store aisle gondola with blueprint hatching
+                    return (
+                      <g key={i}>
+                        <rect x={shelf.x} y={shelf.y} width={shelf.width} height={shelf.height} fill="#0f172a" opacity="0.8" />
+                        <rect x={shelf.x} y={shelf.y} width={shelf.width} height={shelf.height} fill="url(#gondola-hatch)" />
+                        <rect x={shelf.x} y={shelf.y} width={shelf.width} height={shelf.height} fill="none" stroke="#38bdf8" strokeWidth="1" opacity="0.6" />
+                        {/* Gondola structural spine */}
+                        <line x1={shelf.x + shelf.width / 2} y1={shelf.y} x2={shelf.x + shelf.width / 2} y2={shelf.y + shelf.height} stroke="#0ea5e9" strokeWidth="1" opacity="0.4" />
+                      </g>
+                    );
+                  } else if (shelf.type === 'wall-shelf') {
+                    // Perimeter coolers / wall shelving (solid dark)
+                    return (
+                      <g key={i}>
+                        <rect x={shelf.x} y={shelf.y} width={shelf.width} height={shelf.height} fill="#1e293b" stroke="#64748b" strokeWidth="1" />
+                        <rect x={shelf.x + 2} y={shelf.y + 2} width={shelf.width - 4} height={shelf.height - 4} fill="#0f172a" opacity="0.5" />
+                      </g>
+                    );
+                  } else if (shelf.type === 'checkout') {
+                    // Detailed checkout counter (conveyor belt + POS)
+                    const isHorizontal = shelf.width > shelf.height;
+                    const beltW = isHorizontal ? shelf.width * 0.7 : shelf.width;
+                    const beltH = isHorizontal ? shelf.height : shelf.height * 0.7;
+                    const posBgX = isHorizontal ? shelf.x + beltW + 2 : shelf.x;
+                    const posBgY = isHorizontal ? shelf.y : shelf.y + beltH + 2;
+                    const posW = isHorizontal ? shelf.width - beltW - 2 : shelf.width;
+                    const posH = isHorizontal ? shelf.height : shelf.height - beltH - 2;
+
+                    return (
+                      <g key={i}>
+                        {/* Main counter outline */}
+                        <rect x={shelf.x} y={shelf.y} width={shelf.width} height={shelf.height} fill="#1e293b" stroke="#3b82f6" strokeWidth="1" opacity="0.8" rx="2" />
+                        {/* Conveyor belt */}
+                        <rect x={shelf.x + 1} y={shelf.y + 1} width={beltW - 2} height={beltH - 2} fill="#0f172a" stroke="#475569" strokeWidth="0.5" rx="1" />
+                        {/* POS station */}
+                        <rect x={posBgX} y={posBgY} width={posW - 1} height={posH - 1} fill="#2563eb" opacity="0.3" rx="1" />
+                        <circle cx={posBgX + posW / 2} cy={posBgY + posH / 2} r={Math.min(posW, posH) / 3} fill="#60a5fa" />
+                      </g>
+                    );
+                  } else if (shelf.type === 'curved-shelf') {
+                    // Organic / Produce curved islands
+                    return (
+                      <g key={i}>
+                        <rect x={shelf.x} y={shelf.y} width={shelf.width} height={shelf.height} rx={shelf.width / 2} fill="#10b981" opacity="0.2" stroke="#34d399" strokeWidth="1" />
+                        <rect x={shelf.x + 4} y={shelf.y + 4} width={shelf.width - 8} height={shelf.height - 8} rx={(shelf.width - 8) / 2} fill="#065f46" opacity="0.8" />
+                        <circle cx={shelf.x + shelf.width / 2} cy={shelf.y + shelf.height / 2} r={shelf.width / 4} fill="#ecfdf5" opacity="0.1" />
+                      </g>
+                    );
+                  }
+                  return null;
+                })}
               </g>
 
               {/* ── Section labels (inside zone, subtle) ── */}
               {layout.sectionLabels?.map((lbl, i) => (
-                <text key={i} x={lbl.x} y={lbl.y} fill="#9ca3af" fontSize="6" fontWeight="700" textAnchor="start">{lbl.label}</text>
+                <text key={i} x={lbl.x} y={lbl.y} fill="#94a3b8" fontSize="6" fontWeight="800" textAnchor="start" letterSpacing="0.05em">{lbl.label}</text>
               ))}
 
-              {/* ── Entrance / Checkout clear-path markers ── */}
-              {/* Entrance arrow (down → up, indicates entry direction) */}
-              <g opacity="0.7">
-                <rect x={layout.entrance.x - 18} y={layout.entrance.y - 14} width="36" height="12" rx="3" fill="#1d4ed8" />
-                <text x={layout.entrance.x} y={layout.entrance.y - 5} fill="white" fontSize="5.5" fontWeight="900" textAnchor="middle">ENTRADA</text>
+              {/* ── Entrance / Checkout architectural doors ── */}
+              <g opacity="0.9">
+                {/* Entrance Door Symbol */}
+                <path d={`M ${layout.entrance.x - 12} ${layout.entrance.y} A 12 12 0 0 1 ${layout.entrance.x} ${layout.entrance.y - 12}`} fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" />
+                <path d={`M ${layout.entrance.x + 12} ${layout.entrance.y} A 12 12 0 0 0 ${layout.entrance.x} ${layout.entrance.y - 12}`} fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" />
+                <line x1={layout.entrance.x - 12} y1={layout.entrance.y} x2={layout.entrance.x} y2={layout.entrance.y - 12} stroke="#3b82f6" strokeWidth="1.5" />
+                <line x1={layout.entrance.x + 12} y1={layout.entrance.y} x2={layout.entrance.x} y2={layout.entrance.y - 12} stroke="#3b82f6" strokeWidth="1.5" />
+                <text x={layout.entrance.x} y={layout.entrance.y + 8} fill="#60a5fa" fontSize="5" fontWeight="900" textAnchor="middle" letterSpacing="0.1em">IN</text>
               </g>
-              <g opacity="0.7">
-                <rect x={layout.checkout.x - 14} y={layout.checkout.y - 14} width="28" height="12" rx="3" fill="#b91c1c" />
-                <text x={layout.checkout.x} y={layout.checkout.y - 5} fill="white" fontSize="5.5" fontWeight="900" textAnchor="middle">CAJA</text>
+              <g opacity="0.9">
+                {/* Exit Door Symbol */}
+                <path d={`M ${layout.checkout.x - 12} ${layout.checkout.y} A 12 12 0 0 1 ${layout.checkout.x} ${layout.checkout.y - 12}`} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="2,2" />
+                <path d={`M ${layout.checkout.x + 12} ${layout.checkout.y} A 12 12 0 0 0 ${layout.checkout.x} ${layout.checkout.y - 12}`} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="2,2" />
+                <line x1={layout.checkout.x - 12} y1={layout.checkout.y} x2={layout.checkout.x} y2={layout.checkout.y - 12} stroke="#ef4444" strokeWidth="1.5" />
+                <line x1={layout.checkout.x + 12} y1={layout.checkout.y} x2={layout.checkout.x} y2={layout.checkout.y - 12} stroke="#ef4444" strokeWidth="1.5" />
+                <text x={layout.checkout.x} y={layout.checkout.y + 8} fill="#f87171" fontSize="5" fontWeight="900" textAnchor="middle" letterSpacing="0.1em">OUT</text>
               </g>
 
               {/* ── Route line ── */}
@@ -1052,6 +1202,15 @@ export default function App() {
           </button>
         </div>
       )}
+      {/* [TEMP] Map Editor floating button */}
+      <button
+        onClick={() => setShowMapEditor(true)}
+        className="fixed bottom-24 right-4 z-50 w-10 h-10 rounded-full bg-gray-800 border border-gray-600 text-lg flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition-all"
+        title="Abrir Editor de Mapas (Temporal)"
+      >🗺️</button>
+
+      {/* [TEMP] Map Editor Modal */}
+      {showMapEditor && <MapEditor onClose={() => setShowMapEditor(false)} />}
 
     </div>
   );

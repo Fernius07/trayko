@@ -126,55 +126,53 @@ const CATEGORIES = {
     ],
 };
 
-// Store layout zone definitions: each store divides the shop floor into columns/zones
-// These MUST match the shelf geometry in storeLayouts.js exactly.
+// Zonas precisas actualizadas con la nueva geometría Arquitectónica
 const STORE_ZONES = {
     SuperA: {
-        // 4 shelf blocks: x=10(w60), 100(w60), 170(w60), 240(w60), y=38-257
-        columns: [
-            { xMin: 15, xMax: 65, categories: ['Fruta', 'Verdura'] },
-            { xMin: 105, xMax: 155, categories: ['Pan', 'Despensa', 'Snacks'] },
-            { xMin: 175, xMax: 225, categories: ['Lácteos', 'Bebidas', 'Congelados'] },
-            { xMin: 245, xMax: 295, categories: ['Higiene', 'Limpieza'] },
+        // Linea Seca: 5 Pasillos verticales a la izda 
+        // Col1 (x:45-65), Col2(x:80-100), Col3(x:115-135), Col4(x:150-170), Col5(x:185) y Col6(x:220) cortadas por tramo Almacén
+        columnsLargas: [
+            { xMin: 50, xMax: 60, categories: ['Pan', 'Snacks'] },     // Col 1
+            { xMin: 85, xMax: 95, categories: ['Despensa'] },          // Col 2
+            { xMin: 120, xMax: 130, categories: ['Higiene', 'Limpieza'] } // Col 3
         ],
-        carniceria: { xMin: 105, xMax: 155, yMin: 150, yMax: 240 },
-        pescaderia: { xMin: 175, xMax: 225, yMin: 150, yMax: 240 },
-        charcuteria: { xMin: 15, xMax: 65, yMin: 150, yMax: 240 },
-        entrance: { x: 200, y: 370 },
-        checkout: { x: 60, y: 370 },
-        yMin: 45, yMax: 250,
+        columnsCortas: [
+            { xMin: 155, xMax: 165, categories: ['Bebidas'] },           // Col 4 bajo almacen
+            { xMin: 190, xMax: 200, categories: ['Lácteos', 'Congelados'] },// Col 5 partida
+            { xMin: 225, xMax: 235, categories: ['Lácteos', 'Despensa'] } // Col 6 partida
+        ],
+        organicas: ['Fruta', 'Verdura'],  // Isletas curvas derecha
+        carniceria: { xMin: 25, xMax: 150, yMin: 25, yMax: 30 }, // Arriba izda (pared norte)
+        pescaderia: { xMin: 25, xMax: 150, yMin: 25, yMax: 30 },
+        charcuteria: { xMin: 25, xMax: 30, yMin: 35, yMax: 200 }, // Pared izda perimetral firo
     },
     SuperB: {
-        // 3 wide shelf blocks: x=10(w70), 125(w70), 240(w70), y=52-257
-        // Rear perimeter (Carniceria/Pescaderia/Charcuteria): y=10-38
+        // Pared oblicua y escalonados. 
+        // Isla centro: x=45-125
+        // Verticales largas: x=155-185, x=210-240, x=265-295
         columns: [
-            { xMin: 15, xMax: 75, categories: ['Fruta', 'Verdura'] },
-            { xMin: 130, xMax: 190, categories: ['Pan', 'Despensa', 'Snacks', 'Congelados'] },
-            { xMin: 245, xMax: 305, categories: ['Higiene', 'Limpieza', 'Bebidas'] },
+            { xMin: 47, xMax: 122, categories: ['Congelados', 'Lácteos'] },  // Islas centrales gruesas
+            { xMin: 157, xMax: 182, categories: ['Despensa', 'Bebidas'] }, // Larga 1
+            { xMin: 212, xMax: 237, categories: ['Pan', 'Snacks', 'Fruta'] }, // Larga 2
+            { xMin: 267, xMax: 292, categories: ['Higiene', 'Limpieza', 'Verdura'] }, // Corta 3
         ],
-        carniceria: { xMin: 15, xMax: 108, yMin: 13, yMax: 35 },
-        pescaderia: { xMin: 112, xMax: 207, yMin: 13, yMax: 35 },
-        charcuteria: { xMin: 212, xMax: 307, yMin: 13, yMax: 35 },
-        lacteosZone: { xMin: 130, xMax: 190, yMin: 55, yMax: 130 },
-        entrance: { x: 290, y: 370 },
-        checkout: { x: 30, y: 370 },
-        yMin: 58, yMax: 248,
+        carniceria: { xMin: 15, xMax: 300, yMin: 15, yMax: 25 }, // Perimetro superior
+        pescaderia: { xMin: 15, xMax: 300, yMin: 15, yMax: 25 },
+        charcuteria: { xMin: 15, xMax: 20, yMin: 25, yMax: 320 }, // Perimetro izquierdo enorme
     },
     SuperC: {
-        // 5 narrow shelf blocks: x=10(w40), 65(w40), 120(w40), 175(w40), 230(w40), y=36-241
+        // Hipermercado en L
+        // Pasillos largos Izquierda: x=60-95, x=110-145, x=160-195
+        // Islas Organico Curvas Derecha: x=230-360
         columns: [
-            { xMin: 13, xMax: 47, categories: ['Fruta'] },
-            { xMin: 68, xMax: 102, categories: ['Verdura', 'Pan'] },
-            { xMin: 123, xMax: 157, categories: ['Lácteos', 'Despensa'] },
-            { xMin: 178, xMax: 212, categories: ['Bebidas', 'Snacks', 'Congelados'] },
-            { xMin: 233, xMax: 267, categories: ['Higiene', 'Limpieza'] },
+            { xMin: 63, xMax: 92, categories: ['Despensa', 'Bebidas'] },
+            { xMin: 113, xMax: 142, categories: ['Higiene', 'Limpieza', 'Snacks'] },
+            { xMin: 163, xMax: 192, categories: ['Pan', 'Congelados', 'Lácteos'] },
         ],
-        carniceria: { xMin: 13, xMax: 102, yMin: 155, yMax: 233 },
-        pescaderia: { xMin: 123, xMax: 212, yMin: 155, yMax: 233 },
-        charcuteria: { xMin: 233, xMax: 267, yMin: 155, yMax: 233 },
-        entrance: { x: 160, y: 370 },
-        checkout: { x: 290, y: 370 },
-        yMin: 42, yMax: 235,
+        organicas: ['Fruta', 'Verdura'],  // Estas van a los isletas circulares
+        carniceria: { xMin: 15, xMax: 200, yMin: 15, yMax: 25 }, // Arriba Izquierda
+        pescaderia: { xMin: 15, xMax: 200, yMin: 15, yMax: 25 },
+        charcuteria: { xMin: 15, xMax: 20, yMin: 30, yMax: 210 }, // Brazo L Largo
     },
 };
 
@@ -184,49 +182,100 @@ function randBetween(min, max) {
 
 function getCoordsForStore(section, indexInSection, totalInSection, store) {
     const layout = STORE_ZONES[store];
-    const specialSections = {
-        'Carnicería': layout.carniceria,
-        'Pescadería': layout.pescaderia,
-        'Charcutería': layout.charcuteria,
-    };
+    const isSpecial = ['Carnicería', 'Pescadería', 'Charcutería'].includes(section);
 
-    // Special sections have fixed zones (perimeter shelves)
-    if (specialSections[section]) {
-        const zone = specialSections[section];
-        const x = randBetween(zone.xMin + 3, zone.xMax - 3);
-        const y = randBetween(zone.yMin + 2, zone.yMax - 2);
-        return { x, y };
+    if (store === 'SuperA') {
+        if (isSpecial) {
+            const z = layout[section.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+            return { x: randBetween(z.xMin, z.xMax), y: randBetween(z.yMin, z.yMax) };
+        }
+        if (layout.organicas && layout.organicas.includes(section)) {
+            // Distribuir en las islas de frutas orgánicas 
+            // x: 260, 300, 340, 280, 320 ; y: 40, 95, 150
+            const xs = [260, 300, 340, 280, 320];
+            const ys = [40, 95, 150];
+            const px = xs[indexInSection % 5];
+            const py = ys[Math.floor((indexInSection % 15) / 5)];
+            return { x: px + randBetween(5, 15), y: py + randBetween(5, 25) };
+        }
+
+        // Estanterias largas vs cortas (partidas por almacen / pasillo)
+        const inLarga = layout.columnsLargas && layout.columnsLargas.find(c => c.categories.includes(section));
+        const inCorta = layout.columnsCortas && layout.columnsCortas.find(c => c.categories.includes(section));
+
+        let col, minY = 50, maxY = 190;
+
+        if (inLarga) {
+            col = inLarga;
+            minY = 45; maxY = 190;
+        } else if (inCorta) {
+            col = inCorta;
+            // Estantes partidos o rebajados por el almacen
+            minY = 75; maxY = 190;
+            // Hueco horizontal de separación entre estantes cortos (145-160 aprox)
+            if (indexInSection % 2 === 0) maxY = 135; // Mitad arriba
+            else minY = 165; // Mitad abajo
+        } else {
+            col = layout.columnsLargas ? layout.columnsLargas[0] : { xMin: 45, xMax: 55 }; // Fallback
+        }
+
+        const yRange = maxY - minY;
+        const slotH = yRange / Math.max(totalInSection / 2, 1);
+        const idx = Math.floor(indexInSection / 2);
+
+        return {
+            x: randBetween(col.xMin, col.xMax),
+            y: Math.round(minY + (slotH * idx) + (slotH / 2)) // Espaciado vertical proporcional
+        };
+
+    } else if (store === 'SuperB') {
+        if (isSpecial) {
+            const z = layout[section.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+            return { x: randBetween(z.xMin, z.xMax), y: randBetween(z.yMin, z.yMax) };
+        }
+        const col = layout.columns.find(c => c.categories.includes(section)) || layout.columns[1];
+        // En B los escalones cambian las max Y
+        let maxY = 290;
+        if (col.xMin > 200) maxY = 250;
+        if (col.xMin > 260) maxY = 200;
+        if (col.xMax < 130) maxY = 180; // Las Islas
+
+        const yRange = maxY - 50;
+        const slotH = yRange / Math.max(totalInSection, 1);
+        return {
+            x: randBetween(col.xMin, col.xMax),
+            y: Math.round(50 + (slotH * indexInSection) + (slotH / 2))
+        };
+
+    } else if (store === 'SuperC') {
+        if (isSpecial) {
+            const key = section.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const z = layout[key];
+            return { x: randBetween(z.xMin, z.xMax), y: randBetween(z.yMin, z.yMax) };
+        }
+        if (layout.organicas.includes(section)) {
+            // Distribuir en las islas de frutas
+            // Isletas estan en x=230, 280, 330 ; y=100, 180
+            const xs = [230, 280, 330];
+            const ys = [100, 180];
+            const px = xs[indexInSection % 3];
+            const py = ys[Math.floor((indexInSection % 6) / 3)];
+            return { x: px + randBetween(5, 25), y: py + randBetween(5, 55) };
+        }
+
+        const col = layout.columns.find(c => c.categories.includes(section)) || layout.columns[0];
+        const slotH = 150 / Math.max(totalInSection, 1);
+        return {
+            x: randBetween(col.xMin, col.xMax),
+            y: Math.round(50 + (slotH * indexInSection) + (slotH / 2))
+        };
     }
-
-    // Lácteos in SuperB span a dedicated corridor strip
-    if (section === 'Lácteos' && store === 'SuperB' && layout.lacteosZone) {
-        const zone = layout.lacteosZone;
-        const slotWidth = (zone.xMax - zone.xMin) / Math.max(totalInSection, 1);
-        const x = Math.round(zone.xMin + slotWidth * indexInSection + slotWidth / 2);
-        const y = randBetween(zone.yMin + 2, zone.yMax - 2);
-        return { x, y };
-    }
-
-    // Find the column that contains this section
-    const col = layout.columns.find(c => c.categories.includes(section));
-    if (!col) {
-        // Fallback: spread across full layout area
-        return { x: randBetween(15, 300), y: randBetween(layout.yMin, layout.yMax) };
-    }
-
-    const x = randBetween(col.xMin + 2, col.xMax - 2);
-    // Spread vertically within the actual shelf block y-range
-    const yRange = layout.yMax - layout.yMin;
-    const slotHeight = yRange / Math.max(totalInSection, 1);
-    const y = Math.round(layout.yMin + slotHeight * indexInSection + slotHeight / 2);
-    return { x, y };
 }
 
 function generateProducts() {
     const products = [];
     let id = 1;
 
-    // Use a seeded-ish random by sorting by category to get consistent positions
     for (const [section, names] of Object.entries(CATEGORIES)) {
         names.forEach((name, idx) => {
             const basePrice = +(Math.random() * 6 + 0.3).toFixed(2);

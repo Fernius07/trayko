@@ -618,11 +618,22 @@ export default function App() {
     const startPoint = { ...layout.entrance, id: 'start' };
     const endPoint = { ...layout.checkout, id: 'end' };
 
+    // Combine navNodes with entrance and checkout for explicit routing
+    const allNavNodes = {
+      ...layout.navNodes,
+      'entrance': layout.entrance,
+      'checkout': layout.checkout
+    };
+
     // ── GRAPH PATHFINDING ALGORITHMS (NavMesh) ──
     const getNearestNodeId = (p) => {
+      // If the point is exactly the start or end point, return their reserved IDs
+      if (p.id === 'start') return 'entrance';
+      if (p.id === 'end') return 'checkout';
+
       let bestId = null;
       let minDist = Infinity;
-      for (const [id, node] of Object.entries(layout.navNodes)) {
+      for (const [id, node] of Object.entries(allNavNodes)) {
         // Distancia euclidiana al cuadrado (suficiente para comparar)
         const dist = Math.pow(p.x - node.x, 2) + Math.pow(p.y - node.y, 2);
         if (dist < minDist) {
@@ -636,7 +647,7 @@ export default function App() {
     const getDijkstraPath = (startId, endId) => {
       if (startId === endId) return { dist: 0, path: [startId] };
 
-      const nodes = layout.navNodes;
+      const nodes = allNavNodes;
       const edges = layout.navEdges;
 
       const dists = {};
@@ -696,9 +707,9 @@ export default function App() {
       const nodeB = getNearestNodeId(pB);
 
       // Distancia del producto al nodo A (línea recta)
-      const distAToNode = Math.sqrt(Math.pow(pA.x - layout.navNodes[nodeA].x, 2) + Math.pow(pA.y - layout.navNodes[nodeA].y, 2));
+      const distAToNode = Math.sqrt(Math.pow(pA.x - allNavNodes[nodeA].x, 2) + Math.pow(pA.y - allNavNodes[nodeA].y, 2));
       // Distancia del nodo B al producto B (línea recta)
-      const distNodeToB = Math.sqrt(Math.pow(pB.x - layout.navNodes[nodeB].x, 2) + Math.pow(pB.y - layout.navNodes[nodeB].y, 2));
+      const distNodeToB = Math.sqrt(Math.pow(pB.x - allNavNodes[nodeB].x, 2) + Math.pow(pB.y - allNavNodes[nodeB].y, 2));
 
       const { dist } = getDijkstraPath(nodeA, nodeB);
       return distAToNode + dist + distNodeToB;
@@ -712,7 +723,9 @@ export default function App() {
 
       const segments = [pA];
       path.forEach(nodeId => {
-        segments.push(layout.navNodes[nodeId]);
+        if (allNavNodes[nodeId]) {
+          segments.push(allNavNodes[nodeId]);
+        }
       });
       segments.push(pB);
 
@@ -1029,6 +1042,10 @@ export default function App() {
                 if (!item.x || !item.y) return null;
                 const isPending = !item.checked;
                 const isNext = optimalOrder.find(i => !i.checked)?.id === item.id;
+
+                if (!isPending) return null;
+                if (!showFullRoute && !isNext) return null;
+
                 return (
                   <g key={item.id} className="transition-all duration-500">
                     {isNext && (

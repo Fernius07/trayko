@@ -126,150 +126,82 @@ const CATEGORIES = {
     ],
 };
 
-// Zonas precisas actualizadas con la nueva geometría Arquitectónica
-const STORE_ZONES = {
-    SuperA: {
-        // Linea Seca: 5 Pasillos verticales a la izda 
-        // Col1 (x:45-65), Col2(x:80-100), Col3(x:115-135), Col4(x:150-170), Col5(x:185) y Col6(x:220) cortadas por tramo Almacén
-        columnsLargas: [
-            { xMin: 50, xMax: 60, categories: ['Pan', 'Snacks'] },     // Col 1
-            { xMin: 85, xMax: 95, categories: ['Despensa'] },          // Col 2
-            { xMin: 120, xMax: 130, categories: ['Higiene', 'Limpieza'] } // Col 3
-        ],
-        columnsCortas: [
-            { xMin: 155, xMax: 165, categories: ['Bebidas'] },           // Col 4 bajo almacen
-            { xMin: 190, xMax: 200, categories: ['Lácteos', 'Congelados'] },// Col 5 partida
-            { xMin: 225, xMax: 235, categories: ['Lácteos', 'Despensa'] } // Col 6 partida
-        ],
-        organicas: ['Fruta', 'Verdura'],  // Isletas curvas derecha
-        carniceria: { xMin: 25, xMax: 150, yMin: 25, yMax: 30 }, // Arriba izda (pared norte)
-        pescaderia: { xMin: 25, xMax: 150, yMin: 25, yMax: 30 },
-        charcuteria: { xMin: 25, xMax: 30, yMin: 35, yMax: 200 }, // Pared izda perimetral firo
-    },
-    SuperB: {
-        // Pared oblicua y escalonados. 
-        // Isla centro: x=45-125
-        // Verticales largas: x=155-185, x=210-240, x=265-295
-        columns: [
-            { xMin: 47, xMax: 122, categories: ['Congelados', 'Lácteos'] },  // Islas centrales gruesas
-            { xMin: 157, xMax: 182, categories: ['Despensa', 'Bebidas'] }, // Larga 1
-            { xMin: 212, xMax: 237, categories: ['Pan', 'Snacks', 'Fruta'] }, // Larga 2
-            { xMin: 267, xMax: 292, categories: ['Higiene', 'Limpieza', 'Verdura'] }, // Corta 3
-        ],
-        carniceria: { xMin: 15, xMax: 300, yMin: 15, yMax: 25 }, // Perimetro superior
-        pescaderia: { xMin: 15, xMax: 300, yMin: 15, yMax: 25 },
-        charcuteria: { xMin: 15, xMax: 20, yMin: 25, yMax: 320 }, // Perimetro izquierdo enorme
-    },
-    SuperC: {
-        // Hipermercado en L
-        // Pasillos largos Izquierda: x=60-95, x=110-145, x=160-195
-        // Islas Organico Curvas Derecha: x=230-360
-        columns: [
-            { xMin: 63, xMax: 92, categories: ['Despensa', 'Bebidas'] },
-            { xMin: 113, xMax: 142, categories: ['Higiene', 'Limpieza', 'Snacks'] },
-            { xMin: 163, xMax: 192, categories: ['Pan', 'Congelados', 'Lácteos'] },
-        ],
-        organicas: ['Fruta', 'Verdura'],  // Estas van a los isletas circulares
-        carniceria: { xMin: 15, xMax: 200, yMin: 15, yMax: 25 }, // Arriba Izquierda
-        pescaderia: { xMin: 15, xMax: 200, yMin: 15, yMax: 25 },
-        charcuteria: { xMin: 15, xMax: 20, yMin: 30, yMax: 210 }, // Brazo L Largo
-    },
+import { STORE_LAYOUTS } from './storeLayouts.js';
+
+const CATEGORY_TO_ZONE = {
+    'Fruta': 'Frutería',
+    'Verdura': 'Frutería',
+    'Pan': 'Panadería',
+    'Despensa': 'Otros',
+    'Snacks': 'Snacks',
+    'Lácteos': 'Lácteos',
+    'Congelados': 'Congelados',
+    'Carnicería': 'Carnicería',
+    'Pescadería': 'Pescadería',
+    'Charcutería': 'Carnicería',
+    'Bebidas': 'Bebidas',
+    'Higiene': 'Perfumería',
+    'Limpieza': 'Limpieza',
 };
 
-function randBetween(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+function rectIntersect(r1, r2) {
+    return !(r2.x > r1.x + r1.width ||
+        r2.x + r2.width < r1.x ||
+        r2.y > r1.y + r1.height ||
+        r2.y + r2.height < r1.y);
 }
 
-function getCoordsForStore(section, indexInSection, totalInSection, store) {
-    const layout = STORE_ZONES[store];
-    const isSpecial = ['Carnicería', 'Pescadería', 'Charcutería'].includes(section);
+// Function to seeded random based on string sum to keep positions stable
+function seededRandom(seedStr, max) {
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+        hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const rnd = ((hash * 9301 + 49297) % 233280) / 233280;
+    return Math.floor(rnd * max);
+}
 
-    if (store === 'SuperA') {
-        if (isSpecial) {
-            const z = layout[section.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
-            return { x: randBetween(z.xMin, z.xMax), y: randBetween(z.yMin, z.yMax) };
-        }
-        if (layout.organicas && layout.organicas.includes(section)) {
-            // Distribuir en las islas de frutas orgánicas 
-            // x: 260, 300, 340, 280, 320 ; y: 40, 95, 150
-            const xs = [260, 300, 340, 280, 320];
-            const ys = [40, 95, 150];
-            const px = xs[indexInSection % 5];
-            const py = ys[Math.floor((indexInSection % 15) / 5)];
-            return { x: px + randBetween(5, 15), y: py + randBetween(5, 25) };
-        }
+function getCoordsForStore(section, indexInSection, totalInSection, store, productName) {
+    const layout = STORE_LAYOUTS[store];
+    if (!layout || !layout.zones || !layout.shelves) return { x: 50, y: 50 };
 
-        // Estanterias largas vs cortas (partidas por almacen / pasillo)
-        const inLarga = layout.columnsLargas && layout.columnsLargas.find(c => c.categories.includes(section));
-        const inCorta = layout.columnsCortas && layout.columnsCortas.find(c => c.categories.includes(section));
+    const targetLabel = CATEGORY_TO_ZONE[section] || 'Otros';
 
-        let col, minY = 50, maxY = 190;
+    // Find zones that loosely match the label
+    const matchingZones = layout.zones.filter(z => z.label && z.label.toLowerCase().includes(targetLabel.toLowerCase()));
 
-        if (inLarga) {
-            col = inLarga;
-            minY = 45; maxY = 190;
-        } else if (inCorta) {
-            col = inCorta;
-            // Estantes partidos o rebajados por el almacen
-            minY = 75; maxY = 190;
-            // Hueco horizontal de separación entre estantes cortos (145-160 aprox)
-            if (indexInSection % 2 === 0) maxY = 135; // Mitad arriba
-            else minY = 165; // Mitad abajo
-        } else {
-            col = layout.columnsLargas ? layout.columnsLargas[0] : { xMin: 45, xMax: 55 }; // Fallback
-        }
+    // If no exact match, fallback to 'Otros' or the first zone
+    const zonesToUse = matchingZones.length > 0 ? matchingZones : layout.zones;
 
-        const yRange = maxY - minY;
-        const slotH = yRange / Math.max(totalInSection / 2, 1);
-        const idx = Math.floor(indexInSection / 2);
+    // Find all shelves that intersect with ANY of the matched zones
+    const validShelves = layout.shelves.filter(shelf => {
+        // Skip checkouts for product placement
+        if (shelf.type === 'checkout') return false;
 
+        return zonesToUse.some(zone => rectIntersect(shelf, zone));
+    });
+
+    if (validShelves.length === 0) {
+        // Fallback to random shelf if none intersect
+        const valid = layout.shelves.filter(s => s.type !== 'checkout');
+        if (valid.length === 0) return { x: 50, y: 50 };
+        const s = valid[seededRandom(productName, valid.length)];
+        if (!s) return { x: 50, y: 50 };
         return {
-            x: randBetween(col.xMin, col.xMax),
-            y: Math.round(minY + (slotH * idx) + (slotH / 2)) // Espaciado vertical proporcional
-        };
-
-    } else if (store === 'SuperB') {
-        if (isSpecial) {
-            const z = layout[section.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
-            return { x: randBetween(z.xMin, z.xMax), y: randBetween(z.yMin, z.yMax) };
-        }
-        const col = layout.columns.find(c => c.categories.includes(section)) || layout.columns[1];
-        // En B los escalones cambian las max Y
-        let maxY = 290;
-        if (col.xMin > 200) maxY = 250;
-        if (col.xMin > 260) maxY = 200;
-        if (col.xMax < 130) maxY = 180; // Las Islas
-
-        const yRange = maxY - 50;
-        const slotH = yRange / Math.max(totalInSection, 1);
-        return {
-            x: randBetween(col.xMin, col.xMax),
-            y: Math.round(50 + (slotH * indexInSection) + (slotH / 2))
-        };
-
-    } else if (store === 'SuperC') {
-        if (isSpecial) {
-            const key = section.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const z = layout[key];
-            return { x: randBetween(z.xMin, z.xMax), y: randBetween(z.yMin, z.yMax) };
-        }
-        if (layout.organicas.includes(section)) {
-            // Distribuir en las islas de frutas
-            // Isletas estan en x=230, 280, 330 ; y=100, 180
-            const xs = [230, 280, 330];
-            const ys = [100, 180];
-            const px = xs[indexInSection % 3];
-            const py = ys[Math.floor((indexInSection % 6) / 3)];
-            return { x: px + randBetween(5, 25), y: py + randBetween(5, 55) };
-        }
-
-        const col = layout.columns.find(c => c.categories.includes(section)) || layout.columns[0];
-        const slotH = 150 / Math.max(totalInSection, 1);
-        return {
-            x: randBetween(col.xMin, col.xMax),
-            y: Math.round(50 + (slotH * indexInSection) + (slotH / 2))
+            x: Math.round((s.x || 0) + seededRandom(productName + "x", Math.max(1, s.width || 1))),
+            y: Math.round((s.y || 0) + seededRandom(productName + "y", Math.max(1, s.height || 1)))
         };
     }
+
+    // Pick a shelf consistently based on the product name
+    const shelf = validShelves[seededRandom(productName, validShelves.length)];
+    if (!shelf) return { x: 50, y: 50 };
+
+    return {
+        // Distribute coordinates nicely inside the shelf
+        x: Math.round((shelf.x || 0) + (seededRandom(productName + "x", Math.max(1, (shelf.width || 2) - 2)) + 1)),
+        y: Math.round((shelf.y || 0) + (seededRandom(productName + "y", Math.max(1, (shelf.height || 2) - 2)) + 1))
+    };
 }
 
 function generateProducts() {
@@ -297,9 +229,9 @@ function generateProducts() {
                     ? { store: offerStore, desc: offerDescs[Math.floor(Math.random() * offerDescs.length)] }
                     : null,
                 coords: {
-                    SuperA: getCoordsForStore(section, idx, names.length, 'SuperA'),
-                    SuperB: getCoordsForStore(section, idx, names.length, 'SuperB'),
-                    SuperC: getCoordsForStore(section, idx, names.length, 'SuperC'),
+                    SuperA: getCoordsForStore(section, idx, names.length, 'SuperA', name),
+                    SuperB: getCoordsForStore(section, idx, names.length, 'SuperB', name),
+                    SuperC: getCoordsForStore(section, idx, names.length, 'SuperC', name),
                 },
             });
             id++;

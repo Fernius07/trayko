@@ -19,7 +19,19 @@ const TOOLS = [
     { id: 'eraser', label: '🗑️ Borrar', color: '#ef4444', fillOpacity: 0.3 },
 ];
 
-const ZONE_COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#a855f7', '#0ea5e9', '#f97316'];
+const ZONE_CATEGORIES = {
+    'Frutería': '#22c55e',
+    'Carnicería': '#ef4444',
+    'Pescadería': '#3b82f6',
+    'Lácteos': '#0ea5e9',
+    'Panadería': '#f59e0b',
+    'Congelados': '#38bdf8',
+    'Bebidas': '#a855f7',
+    'Limpieza': '#14b8a6',
+    'Perfumería': '#ec4899',
+    'Snacks': '#f97316',
+    'Otros': '#64748b'
+};
 
 const CANVAS_W = 800;
 const CANVAS_H = 600;
@@ -37,8 +49,7 @@ export default function MapEditor({ onClose }) {
     const [navEdges, setNavEdges] = useState({}); // { id: [neighborId, ...] }
     const [entrance, setEntrance] = useState(null);
     const [checkoutPt, setCheckoutPt] = useState(null);
-    const [zoneColor, setZoneColor] = useState(ZONE_COLORS[0]);
-    const [zoneCategory, setZoneCategory] = useState('Fruta');
+    const [zoneCategory, setZoneCategory] = useState(Object.keys(ZONE_CATEGORIES)[0]);
 
     // Manipulation state
     const [mode, setMode] = useState('none'); // 'none' | 'drawing' | 'dragging' | 'resizing'
@@ -75,7 +86,11 @@ export default function MapEditor({ onClose }) {
     }, []);
 
     const saveHistory = useCallback(() => {
-        setHistory(h => [...h.slice(-19), { shelves, zones, navNodes, navEdges, entrance, checkoutPt }]);
+        setHistory(h => {
+            const current = { shelves, zones, navNodes, navEdges, entrance, checkoutPt };
+            if (h.length > 0 && JSON.stringify(h[h.length - 1]) === JSON.stringify(current)) return h;
+            return [...h.slice(-19), current];
+        });
     }, [shelves, zones, navNodes, navEdges, entrance, checkoutPt]);
 
     const undo = useCallback(() => {
@@ -113,6 +128,7 @@ export default function MapEditor({ onClose }) {
                 };
                 for (const [pos, h] of Object.entries(handles)) {
                     if (Math.hypot(h.x - tx, h.y - ty) < handleSize * 2) {
+                        saveHistory();
                         setMode('resizing');
                         setResizeHandle(pos);
                         setStartPt({ x: tx, y: ty });
@@ -160,6 +176,7 @@ export default function MapEditor({ onClose }) {
                 });
                 return;
             }
+            saveHistory();
             setSelected({ type: clickedNode === 'entrance' || clickedNode === 'checkout' ? clickedNode : 'node', id: clickedNode });
             setMode('dragging');
             const targetPos = clickedNode === 'entrance' ? entrance : (clickedNode === 'checkout' ? checkoutPt : navNodes[clickedNode]);
@@ -173,6 +190,7 @@ export default function MapEditor({ onClose }) {
             const shelfIdx = shelves.findLastIndex(s => tx >= s.x && tx <= s.x + s.width && ty >= s.y && ty <= s.y + s.height);
             if (shelfIdx !== -1) {
                 if (tool === 'eraser') { saveHistory(); setShelves(s => s.filter((_, i) => i !== shelfIdx)); return; }
+                saveHistory();
                 setSelected({ type: 'shelf', id: shelfIdx });
                 setMode('dragging');
                 setDragOffset({ x: tx - shelves[shelfIdx].x, y: ty - shelves[shelfIdx].y });
@@ -181,6 +199,7 @@ export default function MapEditor({ onClose }) {
             const zoneIdx = zones.findLastIndex(z => tx >= z.x && tx <= z.x + z.width && ty >= z.y && ty <= z.y + z.height);
             if (zoneIdx !== -1) {
                 if (tool === 'eraser') { saveHistory(); setZones(z => z.filter((_, i) => i !== zoneIdx)); return; }
+                saveHistory();
                 setSelected({ type: 'zone', id: zoneIdx });
                 setMode('dragging');
                 setDragOffset({ x: tx - zones[zoneIdx].x, y: ty - zones[zoneIdx].y });
@@ -278,7 +297,7 @@ export default function MapEditor({ onClose }) {
             if (r.width >= toCanvas(GRID_SIZE) || r.height >= toCanvas(GRID_SIZE)) {
                 saveHistory();
                 const obj = { x: toStore(r.x), y: toStore(r.y), width: toStore(r.width), height: toStore(r.height) };
-                if (tool === 'zone') setZones(z => [...z, { ...obj, color: zoneColor, label: zoneCategory }]);
+                if (tool === 'zone') setZones(z => [...z, { ...obj, color: ZONE_CATEGORIES[zoneCategory] || '#f59e0b', label: zoneCategory }]);
                 else setShelves(s => [...s, { ...obj, type: tool }]);
             }
         }
@@ -288,7 +307,7 @@ export default function MapEditor({ onClose }) {
         setMode('none');
         setCurrentRect(null);
         setResizeHandle(null);
-    }, [mode, currentRect, tool, zoneColor, saveHistory]);
+    }, [mode, currentRect, tool, zoneCategory, saveHistory]);
 
     // ── Export ──────────────────────────────────────────
     const exportJSON = useCallback(() => {
@@ -325,7 +344,7 @@ export default function MapEditor({ onClose }) {
 
     useEffect(() => {
         const h = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selected) {
                 // Copy
                 if (selected.type === 'shelf') setClipboard({ type: 'shelf', data: { ...shelves[selected.id] } });
@@ -367,9 +386,26 @@ export default function MapEditor({ onClose }) {
                         </button>
                     ))}
                 </div>
-                {tool === 'zone' && <div className="flex gap-1 items-center ml-2 border-l border-gray-700 pl-2">
-                    <input type="text" value={zoneCategory} onChange={e => setZoneCategory(e.target.value)} placeholder="Ej: Carnicería" className="w-24 bg-gray-800 text-xs px-1 text-white border border-gray-600 rounded" />
-                    {ZONE_COLORS.map(c => <button key={c} onClick={() => setZoneColor(c)} className={`w-4 h-4 rounded-full ${zoneColor === c ? 'ring-2 ring-white' : ''}`} style={{ background: c }} />)}
+                {tool === 'zone' && selected?.type !== 'zone' && <div className="flex gap-1 items-center ml-2 border-l border-gray-700 pl-2">
+                    <select value={zoneCategory} onChange={e => setZoneCategory(e.target.value)} className="bg-gray-800 text-[10px] uppercase font-bold px-2 py-1 text-white border border-gray-600 rounded">
+                        {Object.keys(ZONE_CATEGORIES).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <div className="w-4 h-4 rounded-full ml-1" style={{ background: ZONE_CATEGORIES[zoneCategory] || '#f59e0b' }} />
+                </div>}
+                {selected?.type === 'zone' && zones[selected.id] && <div className="flex gap-1 items-center ml-2 border-l border-indigo-500 pl-2 bg-indigo-900/40 px-2 py-0.5 rounded">
+                    <span className="text-[10px] text-indigo-300 font-bold">EDITAR ZONA:</span>
+                    <select
+                        value={zones[selected.id].label}
+                        onChange={e => {
+                            const newCat = e.target.value;
+                            saveHistory();
+                            setZones(arr => arr.map((z, i) => i === selected.id ? { ...z, label: newCat, color: ZONE_CATEGORIES[newCat] || '#f59e0b' } : z));
+                        }}
+                        className="bg-gray-800 text-[10px] uppercase font-bold px-2 py-1 text-white border border-indigo-500 rounded"
+                    >
+                        {!ZONE_CATEGORIES[zones[selected.id].label] && <option value={zones[selected.id].label}>{zones[selected.id].label}</option>}
+                        {Object.keys(ZONE_CATEGORIES).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                 </div>}
                 <div className="flex-1" />
                 <button onClick={() => setShowImport(!showImport)} className="text-[10px] px-2 py-1 bg-gray-700 rounded font-bold hover:bg-gray-600">📥 IMPORTAR</button>

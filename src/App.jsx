@@ -7,7 +7,7 @@ import {
 import './index.css';
 import { MOCK_PRODUCTS } from './data/products.js';
 import { STORE_LAYOUTS } from './data/storeLayouts.js';
-import MapEditor from './MapEditor.jsx';
+// import MapEditor from './MapEditor.jsx';
 
 const SECTIONS_ORDER = [
   'Fruta', 'Verdura', 'Pan', 'Despensa', 'Snacks', 'Lácteos', 'Congelados',
@@ -30,8 +30,8 @@ export default function App() {
   const [selectedStore, setSelectedStore] = useState('SuperA');
   const [isFullScreenMap, setIsFullScreenMap] = useState(false);
   const [showFullRoute, setShowFullRoute] = useState(false);
-  // [TEMP] Map Design Editor
-  const [showMapEditor, setShowMapEditor] = useState(false);
+  // [TEMP] Map Design Editor - DISABLED
+  // const [showMapEditor, setShowMapEditor] = useState(false);
 
   const pressTimer = useRef(null);
 
@@ -1219,15 +1219,17 @@ export default function App() {
           </button>
         </div>
       )}
-      {/* [TEMP] Map Editor floating button */}
+      {/* [TEMP] Map Editor floating button - DISABLED
       <button
         onClick={() => setShowMapEditor(true)}
         className="fixed bottom-24 right-4 z-50 w-10 h-10 rounded-full bg-gray-800 border border-gray-600 text-lg flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition-all"
         title="Abrir Editor de Mapas (Temporal)"
       >🗺️</button>
+      */}
 
-      {/* [TEMP] Map Editor Modal */}
+      {/* [TEMP] Map Editor Modal - DISABLED
       {showMapEditor && <MapEditor onClose={() => setShowMapEditor(false)} />}
+      */}
 
     </div>
   );

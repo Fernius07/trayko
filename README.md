@@ -2,8 +2,6 @@
 
 <div align="center">
 
-![Trayko Logo](https://img.icons8.com/isometric/512/shopping-cart.png)
-
 ### 🎬 Demostración en Vivo
 <!-- Reemplaza 'URL_DE_TU_GIF' con la ruta real de tu archivo gif, por ejemplo: ./public/demo.gif -->
 ![Trayko Demo](./src/assets/ezgif-7e699d8aca74b047.gif)
@@ -96,4 +94,4 @@ Trayko está construido con tecnologías de vanguardia para asegurar rendimiento
 > **Trayko** ha sido desarrollado como el proyecto final del **Grupo 16 de Interacción y Multimedia**, con el objetivo de demostrar cómo la tecnología puede humanizar y simplificar procesos cotidianos.
 
 ---
-© 2024 Proyecto Trayko. Todos los derechos reservados.
+© 2026 Proyecto Trayko. Todos los derechos reservados.

@@ -1,6 +1,12 @@
 # 🛒 Trayko: Smart Shopping, Smart Savings
 
-![Trayko Banner](file:///C:/Users/FRN_DEUSTO/.gemini/antigravity/brain/7894223c-a36d-4290-a1e2-12cc6dcd5a39/trayko_header_banner_1773532528786.png)
+<div align="center">
+
+![Trayko Logo](https://img.icons8.com/isometric/512/shopping-cart.png)
+
+### 🎬 Demostración en Vivo
+<!-- Reemplaza 'URL_DE_TU_GIF' con la ruta real de tu archivo gif, por ejemplo: ./public/demo.gif -->
+![Trayko Demo](./src/assets/ezgif-7e699d8aca74b047.gif)
 
 > **Trayko no es solo una lista digital; es un asistente de compras ubicuo que revoluciona la experiencia en el supermercado mediante IA, navegación interior y comparativa en tiempo real.**
 
@@ -8,6 +14,8 @@
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+</div>
 
 ---
 
@@ -28,7 +36,6 @@ Prepárate sin fricciones desde cualquier lugar:
 *   **Priorización:** Marca productos como imprescindibles para que la app ajuste tu presupuesto.
 
 ### 2. Comparador de Precios Inteligente 💰
-![Price Comparison](file:///C:/Users/FRN_DEUSTO/.gemini/antigravity/brain/7894223c-a36d-4290-a1e2-12cc6dcd5a39/trayko_price_comparison_1773532564559.png)
 *   **Análisis Multi-Supermercado:** Visualiza el coste total de tu lista en diferentes establecimientos locales.
 *   **Planificación de Ahorro:** Identifica instantáneamente la "Mejor Opción" económica y sugiere dónde acudir para maximizar tu presupuesto.
 
@@ -38,7 +45,6 @@ Prepárate sin fricciones desde cualquier lugar:
 *   **Mapa Interactivo 2D:** Visualización simplificada por secciones para eliminar la sobrecarga visual.
 
 ### 4. Asistencia con Realidad Aumentada (AR) 🏹
-![AR Assistance](file:///C:/Users/FRN_DEUSTO/.gemini/antigravity/brain/7894223c-a36d-4290-a1e2-12cc6dcd5a39/trayko_ar_navigation_1773532548671.png)
 *   **Indicaciones Visuales:** Flechas en AR que se superponen a la cámara para guiarte físicamente hacia el estante exacto donde se encuentra tu producto.
 
 ---

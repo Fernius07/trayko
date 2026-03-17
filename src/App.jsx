@@ -374,144 +374,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* 🛒 Add Products Modal */}
-      {showAddModal && (
-        <div className="absolute inset-0 z-[200] flex flex-col bg-gray-50 animate-fade-in">
-          {/* Modal Header */}
-          <div className="flex-shrink-0 premium-gradient text-white px-6 pt-10 pb-5 rounded-b-[2rem] shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-[10px] font-black text-emerald-100 uppercase tracking-[0.2em]">Añadir productos</p>
-                <h3 className="text-2xl font-black text-white">Buscar</h3>
-              </div>
-              <button onClick={closeAddModal} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center border border-white/20 active:scale-90 transition-transform">
-                <X className="w-5 h-5 text-white" />
-              </button>
-            </div>
-
-            {/* Search + Autocomplete */}
-            <form onSubmit={handleManualSearch} className="relative">
-              <input
-                type="text"
-                placeholder="Buscar producto..."
-                autoComplete="off"
-                autoFocus
-                className="w-full bg-white/20 border border-white/30 text-white placeholder-white/70 rounded-2xl py-3 pl-10 pr-16 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md transition-all shadow-inner"
-                value={manualSearch}
-                onChange={handleSearchChange}
-              />
-              <Search className="absolute left-3 top-3.5 w-5 h-5 text-white/70" />
-              <div className="absolute right-2 top-1.5 flex gap-1">
-                <button
-                  type="button"
-                  onClick={handleVoiceInput}
-                  className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-white/20 hover:bg-white/30'
-                    }`}
-                >
-                  <Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} />
-                </button>
-                <button type="button" onClick={handleCameraMock} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-all">
-                  <Camera className="w-4 h-4 text-white" />
-                </button>
-              </div>
-
-              {/* Autocomplete suggestions */}
-              {searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-50 border border-gray-100">
-                  {searchSuggestions.map((product, i) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => { addProductToCart(product); setManualSearch(''); setSearchSuggestions([]); }}
-                      className={`w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left ${i < searchSuggestions.length - 1 ? 'border-b border-gray-100' : ''
-                        }`}
-                    >
-                      <div>
-                        <p className="font-bold text-gray-900 text-sm">{product.name}</p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{product.section}</p>
-                      </div>
-                      <span className="text-emerald-600 font-black text-sm shrink-0 ml-3">{product.prices.SuperA.toFixed(2)}€</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Body: Category browser or product list */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide">
-            {selectedCategory === null ? (
-              // Category grid
-              <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Explorar por categoría</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {SECTIONS_ORDER.map(cat => {
-                    const count = MOCK_PRODUCTS.filter(p => p.section === cat && !cart.find(c => c.id === p.id)).length;
-                    const emoji = {
-                      Fruta: '🍎', Verdura: '🥦', Pan: '🍞', Despensa: '🫙', Snacks: '🍿',
-                      Lácteos: '🥛', Congelados: '❄️', Carnicería: '🥩', Pescadería: '🐟', Charctuería: '🧆',
-                      Charcutería: '🧆', Bebidas: '🥤', Higiene: '🧼', Limpieza: '🧹'
-                    }[cat] || '🛒';
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.97] transition-all"
-                      >
-                        <div className="text-left">
-                          <span className="text-2xl">{emoji}</span>
-                          <p className="font-black text-gray-800 text-sm mt-1">{cat}</p>
-                          <p className="text-[10px] text-gray-400 font-semibold">{count} disponibles</p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              // Products in selected category
-              <div>
-                <button
-                  onClick={() => setSelectedCategory(null)}
-                  className="flex items-center gap-2 text-emerald-600 font-bold text-sm mb-4 active:opacity-70"
-                >
-                  <ChevronRight className="w-4 h-4 rotate-180" /> Volver
-                </button>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{selectedCategory}</p>
-                <div className="space-y-2">
-                  {MOCK_PRODUCTS.filter(p => p.section === selectedCategory).map(product => {
-                    const inCart = !!cart.find(c => c.id === product.id);
-                    return (
-                      <button
-                        key={product.id}
-                        onClick={() => !inCart && addProductToCart(product)}
-                        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart
-                          ? 'bg-emerald-50 border-emerald-200 opacity-60'
-                          : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'
-                          }`}
-                      >
-                        <div className="text-left min-w-0">
-                          <p className={`font-bold text-sm truncate ${inCart ? 'text-emerald-700 line-through' : 'text-gray-900'}`}>{product.name}</p>
-                          {product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}
-                        </div>
-                        <div className="text-right shrink-0 pl-3 flex items-center gap-2">
-                          <span className="font-black text-sm text-gray-800">{product.prices.SuperA.toFixed(2)}€</span>
-                          {inCart
-                            ? <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                            : <Plus className="w-4 h-4 text-emerald-500" strokeWidth={3} />
-                          }
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* 🎤 Voice Disambiguation Popup */}
       {voiceMatches && (
         <div className="absolute inset-0 z-[200] flex flex-col bg-gray-950/95 backdrop-blur-md animate-fade-in">
@@ -1177,7 +1039,7 @@ export default function App() {
   };
 
   return (
-    <div className="max-w-md mx-auto h-[100dvh] sm:h-[850px] sm:my-8 bg-gray-50 sm:rounded-[3rem] shadow-2xl relative sm:border-[12px] border-black flex flex-col font-sans overflow-hidden">
+    <div className="w-full sm:max-w-[340px] mx-auto h-[100dvh] sm:h-[720px] sm:my-8 bg-gray-50 sm:rounded-[3rem] sm:shadow-2xl relative sm:border-[12px] sm:border-black flex flex-col font-sans overflow-hidden">
 
       {/* Toast Notification Premium */}
       {feedbackMsg && (
@@ -1195,6 +1057,175 @@ export default function App() {
         {view === 'list' && renderList()}
         {view === 'compare' && renderCompare()}
         {view === 'store' && renderStoreMode()}
+
+        {/* 🛒 Add Products Modal (Bottom Sheet - Absolute within frame) */}
+        {showAddModal && (
+          <>
+            {/* Backdrop (Absolute to frame) */}
+            <div
+              className="absolute inset-0 bg-black/50 z-[190] animate-fade-in backdrop-blur-sm"
+              onClick={closeAddModal}
+            ></div>
+
+            {/* Bottom Sheet */}
+            <div
+              className="absolute bottom-0 left-0 right-0 max-h-[90%] h-full bg-gray-50 rounded-t-[2.5rem] z-[200] flex flex-col shadow-2xl animate-fade-in translate-y-0 transition-transform duration-300"
+              style={{ pointerEvents: 'auto' }}
+              {...(() => {
+                let dragStartY = null;
+                let currentTranslateY = 0;
+                let isDragging = false;
+                return {
+                  onMouseDown: (e) => {
+                    if (!e.target.closest('.modal-header-drag')) return;
+                    dragStartY = e.clientY;
+                    isDragging = true;
+                  },
+                  onMouseMove: (e) => {
+                    if (!isDragging || dragStartY === null) return;
+                    const deltaY = e.clientY - dragStartY;
+                    if (deltaY > 0) {
+                      currentTranslateY = deltaY;
+                      e.currentTarget.style.transform = `translateY(${deltaY}px)`;
+                      e.currentTarget.style.transition = 'none';
+                    }
+                  },
+                  onMouseUp: (e) => {
+                    if (!isDragging || dragStartY === null) return;
+                    isDragging = false;
+                    const sheet = e.currentTarget;
+                    sheet.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
+                    if (currentTranslateY > 150) {
+                      sheet.style.transform = `translateY(100%)`;
+                      setTimeout(closeAddModal, 300);
+                    } else {
+                      sheet.style.transform = `translateY(0)`;
+                    }
+                    dragStartY = null;
+                    currentTranslateY = 0;
+                  },
+                  onMouseLeave: (e) => {
+                    if (!isDragging || dragStartY === null) return;
+                    isDragging = false;
+                    const sheet = e.currentTarget;
+                    sheet.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
+                    if (currentTranslateY > 150) {
+                      sheet.style.transform = `translateY(100%)`;
+                      setTimeout(closeAddModal, 300);
+                    } else {
+                      sheet.style.transform = `translateY(0)`;
+                    }
+                    dragStartY = null;
+                    currentTranslateY = 0;
+                  },
+                  onTouchStart: (e) => {
+                    if (!e.target.closest('.modal-header-drag')) return;
+                    dragStartY = e.touches[0].clientY;
+                    isDragging = true;
+                  },
+                  onTouchMove: (e) => {
+                    if (!isDragging || dragStartY === null) return;
+                    const deltaY = e.touches[0].clientY - dragStartY;
+                    if (deltaY > 0) {
+                      currentTranslateY = deltaY;
+                      e.currentTarget.style.transform = `translateY(${deltaY}px)`;
+                      e.currentTarget.style.transition = 'none';
+                    }
+                  },
+                  onTouchEnd: (e) => {
+                    if (!isDragging || dragStartY === null) return;
+                    isDragging = false;
+                    const sheet = e.currentTarget;
+                    sheet.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
+                    if (currentTranslateY > 100) {
+                      sheet.style.transform = `translateY(100%)`;
+                      setTimeout(closeAddModal, 300);
+                    } else {
+                      sheet.style.transform = `translateY(0)`;
+                    }
+                    dragStartY = null;
+                    currentTranslateY = 0;
+                  }
+                };
+              })()}
+            >
+              <div className="modal-header-drag flex-shrink-0 premium-gradient text-white px-6 pt-5 pb-5 rounded-t-[2.5rem] shadow-lg rounded-b-[2rem] relative touch-pan-y cursor-grab active:cursor-grabbing">
+                <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-6 pointer-events-none"></div>
+                <div className="flex items-center justify-between mb-4 mt-[-10px] pointer-events-none">
+                  <div>
+                    <p className="text-[10px] font-black text-emerald-100 uppercase tracking-[0.2em]">Añadir productos</p>
+                    <h3 className="text-2xl font-black text-white">Buscar</h3>
+                  </div>
+                  <button onClick={closeAddModal} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center border border-white/20 active:scale-90 transition-transform hover:bg-white/30 pointer-events-auto">
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+                <form onSubmit={handleManualSearch} className="relative">
+                  <input
+                    type="text"
+                    placeholder="Buscar producto..."
+                    autoComplete="off"
+                    className="w-full bg-white/20 border border-white/30 text-white placeholder-white/70 rounded-2xl py-3 pl-10 pr-12 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md transition-all shadow-inner"
+                    value={manualSearch}
+                    onChange={handleSearchChange}
+                  />
+                  <Search className="absolute left-3 top-3.5 w-5 h-5 text-white/70 pointer-events-none" />
+                  <div className="absolute right-2 top-1.5 flex gap-1">
+                    <button type="button" onClick={handleVoiceInput} className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-white/20 hover:bg-white/30'}`}><Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} /></button>
+                    <button type="button" onClick={handleCameraMock} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-all"><Camera className="w-4 h-4 text-white" /></button>
+                  </div>
+                  {searchSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-50 border border-gray-100 max-h-60 overflow-y-auto">
+                      {searchSuggestions.map((product, i) => (
+                        <button key={product.id} type="button" onClick={() => { addProductToCart(product); setManualSearch(''); setSearchSuggestions([]); }} className={`w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left ${i < searchSuggestions.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                          <div><p className="font-bold text-gray-900 text-sm">{product.name}</p><p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{product.section}</p></div>
+                          <span className="text-emerald-600 font-black text-sm shrink-0 ml-3">{product.prices.SuperA.toFixed(2)}€</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </form>
+              </div>
+              <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide pb-10">
+                {selectedCategory === null ? (
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Explorar por categoría</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {SECTIONS_ORDER.map(cat => {
+                        const count = MOCK_PRODUCTS.filter(p => p.section === cat && !cart.find(c => c.id === p.id)).length;
+                        const emoji = { Fruta: '🍎', Verdura: '🥦', Pan: '🍞', Despensa: '🫙', Snacks: '🍿', Lácteos: '🥛', Congelados: '❄️', Carnicería: '🥩', Pescadería: '🐟', Charcutería: '🧆', Bebidas: '🥤', Higiene: '🧼', Limpieza: '🧹' }[cat] || '🛒';
+                        return (
+                          <button key={cat} onClick={() => setSelectedCategory(cat)} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.97] transition-all">
+                            <div className="text-left"><span className="text-2xl">{emoji}</span><p className="font-black text-gray-800 text-sm mt-1">{cat}</p><p className="text-[10px] text-gray-400 font-semibold">{count} disponibles</p></div>
+                            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <button onClick={() => setSelectedCategory(null)} className="flex items-center gap-2 text-emerald-600 font-bold text-sm mb-4 active:opacity-70 bg-emerald-50 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition-colors">
+                      <ChevronRight className="w-4 h-4 rotate-180" /> Volver a categorías
+                    </button>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{selectedCategory}</p>
+                    <div className="space-y-2">
+                      {MOCK_PRODUCTS.filter(p => p.section === selectedCategory).map(product => {
+                        const inCart = !!cart.find(c => c.id === product.id);
+                        return (
+                          <button key={product.id} onClick={() => !inCart && addProductToCart(product)} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart ? 'bg-emerald-50 border-emerald-200 opacity-60' : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'}`}>
+                            <div className="text-left min-w-0"><p className={`font-bold text-sm truncate ${inCart ? 'text-emerald-700 line-through' : 'text-gray-900'}`}>{product.name}</p>{product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}</div>
+                            <div className="text-right shrink-0 pl-3 flex items-center gap-2"><span className="font-black text-sm text-gray-800">{product.prices.SuperA.toFixed(2)}€</span>{inCart ? <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} /> : <Plus className="w-4 h-4 text-emerald-500" strokeWidth={3} />}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Bottom Navigation */}
@@ -1219,18 +1250,6 @@ export default function App() {
           </button>
         </div>
       )}
-      {/* [TEMP] Map Editor floating button - DISABLED
-      <button
-        onClick={() => setShowMapEditor(true)}
-        className="fixed bottom-24 right-4 z-50 w-10 h-10 rounded-full bg-gray-800 border border-gray-600 text-lg flex items-center justify-center shadow-lg hover:bg-gray-700 active:scale-95 transition-all"
-        title="Abrir Editor de Mapas (Temporal)"
-      >🗺️</button>
-      */}
-
-      {/* [TEMP] Map Editor Modal - DISABLED
-      {showMapEditor && <MapEditor onClose={() => setShowMapEditor(false)} />}
-      */}
-
     </div>
   );
 }

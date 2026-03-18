@@ -373,44 +373,6 @@ export default function App() {
           <Plus className="w-7 h-7 text-white" strokeWidth={3} />
         </button>
       </div>
-
-      {/* 🎤 Voice Disambiguation Popup */}
-      {voiceMatches && (
-        <div className="absolute inset-0 z-[200] flex flex-col bg-gray-950/95 backdrop-blur-md animate-fade-in">
-          <div className="flex items-center justify-between px-6 pt-10 pb-4 border-b border-white/10">
-            <div>
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">🎤 ¿Cuál de estos?</p>
-              <h3 className="text-xl font-black text-white mt-1">Selecciona el producto</h3>
-            </div>
-            <button onClick={() => setVoiceMatches(null)} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white border border-white/10 active:scale-90 transition-transform">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 scrollbar-hide">
-            {voiceMatches.map(product => (
-              <button
-                key={product.id}
-                onClick={() => { addProductToCart(product); setVoiceMatches(null); }}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between active:scale-[0.97] transition-all hover:bg-white/10 hover:border-emerald-500/50"
-              >
-                <div className="text-left">
-                  <p className="font-black text-white text-base">{product.name}</p>
-                  <p className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold mt-0.5">{product.section}</p>
-                </div>
-                <div className="text-right shrink-0 pl-4">
-                  <p className="text-lg font-black text-white">{product.prices.SuperA.toFixed(2)}€</p>
-                  {product.offer && <p className="text-[9px] text-yellow-400 font-bold">{product.offer.desc}</p>}
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="px-5 pb-6 pt-3 border-t border-white/10">
-            <button onClick={() => setVoiceMatches(null)} className="w-full py-3.5 rounded-2xl bg-white/10 text-white font-bold text-sm border border-white/10 active:scale-95 transition-transform">
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -1043,7 +1005,7 @@ export default function App() {
 
       {/* Toast Notification Premium */}
       {feedbackMsg && (
-        <div className="absolute top-6 left-0 right-0 px-6 z-[100] flex justify-center animate-slide-down pointer-events-none">
+        <div className="absolute top-6 left-0 right-0 px-6 z-[300] flex justify-center animate-slide-down pointer-events-none">
           <div className="glass-dark text-white px-5 py-2.5 rounded-2xl shadow-2xl border border-white/10 font-bold text-xs text-center flex items-center gap-2">
             <Zap className="w-3.5 h-3.5 text-yellow-400 fill-current" />
             {feedbackMsg}
@@ -1069,7 +1031,7 @@ export default function App() {
 
             {/* Bottom Sheet */}
             <div
-              className="absolute bottom-0 left-0 right-0 max-h-[90%] h-full bg-gray-50 rounded-t-[2.5rem] z-[200] flex flex-col shadow-2xl animate-fade-in translate-y-0 transition-transform duration-300"
+              className="absolute bottom-0 left-0 right-0 max-h-[90%] h-full bg-gray-50 rounded-t-[2.5rem] z-[200] flex flex-col shadow-2xl animate-fade-in translate-y-0 transition-transform duration-300 overflow-hidden"
               style={{ pointerEvents: 'auto' }}
               {...(() => {
                 let dragStartY = null;
@@ -1149,80 +1111,124 @@ export default function App() {
                 };
               })()}
             >
-              <div className="modal-header-drag flex-shrink-0 premium-gradient text-white px-6 pt-5 pb-5 rounded-t-[2.5rem] shadow-lg rounded-b-[2rem] relative touch-pan-y cursor-grab active:cursor-grabbing">
-                <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-6 pointer-events-none"></div>
-                <div className="flex items-center justify-between mb-4 mt-[-10px] pointer-events-none">
-                  <div>
-                    <p className="text-[10px] font-black text-emerald-100 uppercase tracking-[0.2em]">Añadir productos</p>
-                    <h3 className="text-2xl font-black text-white">Buscar</h3>
-                  </div>
-                  <button onClick={closeAddModal} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center border border-white/20 active:scale-90 transition-transform hover:bg-white/30 pointer-events-auto">
-                    <X className="w-5 h-5 text-white" />
-                  </button>
-                </div>
-                <form onSubmit={handleManualSearch} className="relative">
-                  <input
-                    type="text"
-                    placeholder="Buscar producto..."
-                    autoComplete="off"
-                    className="w-full bg-white/20 border border-white/30 text-white placeholder-white/70 rounded-2xl py-3 pl-10 pr-12 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md transition-all shadow-inner"
-                    value={manualSearch}
-                    onChange={handleSearchChange}
-                  />
-                  <Search className="absolute left-3 top-3.5 w-5 h-5 text-white/70 pointer-events-none" />
-                  <div className="absolute right-2 top-1.5 flex gap-1">
-                    <button type="button" onClick={handleVoiceInput} className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-white/20 hover:bg-white/30'}`}><Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} /></button>
-                    <button type="button" onClick={handleCameraMock} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-all"><Camera className="w-4 h-4 text-white" /></button>
-                  </div>
-                  {searchSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-50 border border-gray-100 max-h-60 overflow-y-auto">
-                      {searchSuggestions.map((product, i) => (
-                        <button key={product.id} type="button" onClick={() => { addProductToCart(product); setManualSearch(''); setSearchSuggestions([]); }} className={`w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left ${i < searchSuggestions.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                          <div><p className="font-bold text-gray-900 text-sm">{product.name}</p><p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{product.section}</p></div>
-                          <span className="text-emerald-600 font-black text-sm shrink-0 ml-3">{product.prices.SuperA.toFixed(2)}€</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </form>
-              </div>
-              <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide pb-10">
-                {selectedCategory === null ? (
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Explorar por categoría</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {SECTIONS_ORDER.map(cat => {
-                        const count = MOCK_PRODUCTS.filter(p => p.section === cat && !cart.find(c => c.id === p.id)).length;
-                        const emoji = { Fruta: '🍎', Verdura: '🥦', Pan: '🍞', Despensa: '🫙', Snacks: '🍿', Lácteos: '🥛', Congelados: '❄️', Carnicería: '🥩', Pescadería: '🐟', Charcutería: '🧆', Bebidas: '🥤', Higiene: '🧼', Limpieza: '🧹' }[cat] || '🛒';
-                        return (
-                          <button key={cat} onClick={() => setSelectedCategory(cat)} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.97] transition-all">
-                            <div className="text-left"><span className="text-2xl">{emoji}</span><p className="font-black text-gray-800 text-sm mt-1">{cat}</p><p className="text-[10px] text-gray-400 font-semibold">{count} disponibles</p></div>
-                            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-                          </button>
-                        );
-                      })}
+              {voiceMatches ? (
+                // 🎤 Voice Disambiguation UI INSIDE Modal
+                <div className="flex flex-col h-full animate-fade-in bg-gray-50">
+                  <div className="modal-header-drag flex-shrink-0 premium-gradient text-white px-6 pt-8 pb-6 rounded-t-[2.5rem] shadow-lg rounded-b-[2rem] relative">
+                    <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-6 pointer-events-none"></div>
+                    <div className="flex items-center justify-between pointer-events-none">
+                      <div>
+                        <p className="text-[10px] font-black text-emerald-100 uppercase tracking-[0.2em]">🎤 ¿Cuál de estos?</p>
+                        <h3 className="text-2xl font-black text-white mt-1">Selecciona el producto</h3>
+                      </div>
+                      <button onClick={() => setVoiceMatches(null)} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center border border-white/20 active:scale-90 transition-transform pointer-events-auto">
+                        <X className="w-5 h-5 text-white" />
+                      </button>
                     </div>
                   </div>
-                ) : (
-                  <div>
-                    <button onClick={() => setSelectedCategory(null)} className="flex items-center gap-2 text-emerald-600 font-bold text-sm mb-4 active:opacity-70 bg-emerald-50 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition-colors">
-                      <ChevronRight className="w-4 h-4 rotate-180" /> Volver a categorías
+                  <div className="flex-1 overflow-y-auto px-5 py-6 space-y-3 scrollbar-hide">
+                    {voiceMatches.map(product => (
+                      <button
+                        key={product.id}
+                        onClick={() => { addProductToCart(product); setVoiceMatches(null); }}
+                        className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between active:scale-[0.97] transition-all shadow-sm hover:border-emerald-500/50 hover:bg-emerald-50/30"
+                      >
+                        <div className="text-left">
+                          <p className="font-bold text-gray-900 text-base">{product.name}</p>
+                          <p className="text-[10px] text-emerald-600 uppercase tracking-widest font-bold mt-0.5">{product.section}</p>
+                        </div>
+                        <div className="text-right shrink-0 pl-4">
+                          <p className="text-lg font-black text-gray-800">{product.prices.SuperA.toFixed(2)}€</p>
+                          {product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="px-5 pb-8 pt-4 border-t border-gray-100 bg-white/50 backdrop-blur-sm">
+                    <button onClick={() => setVoiceMatches(null)} className="w-full py-4 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm border border-gray-200 active:scale-95 transition-transform hover:bg-gray-200">
+                      Cancelar
                     </button>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{selectedCategory}</p>
-                    <div className="space-y-2">
-                      {MOCK_PRODUCTS.filter(p => p.section === selectedCategory).map(product => {
-                        const inCart = !!cart.find(c => c.id === product.id);
-                        return (
-                          <button key={product.id} onClick={() => !inCart && addProductToCart(product)} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart ? 'bg-emerald-50 border-emerald-200 opacity-60' : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'}`}>
-                            <div className="text-left min-w-0"><p className={`font-bold text-sm truncate ${inCart ? 'text-emerald-700 line-through' : 'text-gray-900'}`}>{product.name}</p>{product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}</div>
-                            <div className="text-right shrink-0 pl-3 flex items-center gap-2"><span className="font-black text-sm text-gray-800">{product.prices.SuperA.toFixed(2)}€</span>{inCart ? <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} /> : <Plus className="w-4 h-4 text-emerald-500" strokeWidth={3} />}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                // Normal Modal Content
+                <>
+                  <div className="modal-header-drag flex-shrink-0 premium-gradient text-white px-6 pt-5 pb-5 rounded-t-[2.5rem] shadow-lg rounded-b-[2rem] relative touch-pan-y cursor-grab active:cursor-grabbing">
+                    <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-6 pointer-events-none"></div>
+                    <div className="flex items-center justify-between mb-4 mt-[-10px] pointer-events-none">
+                      <div>
+                        <p className="text-[10px] font-black text-emerald-100 uppercase tracking-[0.2em]">Añadir productos</p>
+                        <h3 className="text-2xl font-black text-white">Buscar</h3>
+                      </div>
+                      <button onClick={closeAddModal} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center border border-white/20 active:scale-90 transition-transform hover:bg-white/30 pointer-events-auto">
+                        <X className="w-5 h-5 text-white" />
+                      </button>
+                    </div>
+                    <form onSubmit={handleManualSearch} className="relative">
+                      <input
+                        type="text"
+                        placeholder="Buscar producto..."
+                        autoComplete="off"
+                        className="w-full bg-white/20 border border-white/30 text-white placeholder-white/70 rounded-2xl py-3 pl-10 pr-12 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md transition-all shadow-inner"
+                        value={manualSearch}
+                        onChange={handleSearchChange}
+                      />
+                      <Search className="absolute left-3 top-3.5 w-5 h-5 text-white/70 pointer-events-none" />
+                      <div className="absolute right-2 top-1.5 flex gap-1">
+                        <button type="button" onClick={handleVoiceInput} className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-white/20 hover:bg-white/30'}`}><Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} /></button>
+                        <button type="button" onClick={handleCameraMock} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-all"><Camera className="w-4 h-4 text-white" /></button>
+                      </div>
+                      {searchSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-50 border border-gray-100 max-h-60 overflow-y-auto">
+                          {searchSuggestions.map((product, i) => (
+                            <button key={product.id} type="button" onClick={() => { addProductToCart(product); setManualSearch(''); setSearchSuggestions([]); }} className={`w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left ${i < searchSuggestions.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                              <div><p className="font-bold text-gray-900 text-sm">{product.name}</p><p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{product.section}</p></div>
+                              <span className="text-emerald-600 font-black text-sm shrink-0 ml-3">{product.prices.SuperA.toFixed(2)}€</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </form>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide pb-10">
+                    {selectedCategory === null ? (
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Explorar por categoría</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {SECTIONS_ORDER.map(cat => {
+                            const count = MOCK_PRODUCTS.filter(p => p.section === cat && !cart.find(c => c.id === p.id)).length;
+                            const emoji = { Fruta: '🍎', Verdura: '🥦', Pan: '🍞', Despensa: '🫙', Snacks: '🍿', Lácteos: '🥛', Congelados: '❄️', Carnicería: '🥩', Pescadería: '🐟', Charcutería: '🧆', Bebidas: '🥤', Higiene: '🧼', Limpieza: '🧹' }[cat] || '🛒';
+                            return (
+                              <button key={cat} onClick={() => setSelectedCategory(cat)} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.97] transition-all">
+                                <div className="text-left"><span className="text-2xl">{emoji}</span><p className="font-black text-gray-800 text-sm mt-1">{cat}</p><p className="text-[10px] text-gray-400 font-semibold">{count} disponibles</p></div>
+                                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <button onClick={() => setSelectedCategory(null)} className="flex items-center gap-2 text-emerald-600 font-bold text-sm mb-4 active:opacity-70 bg-emerald-50 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition-colors">
+                          <ChevronRight className="w-4 h-4 rotate-180" /> Volver a categorías
+                        </button>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{selectedCategory}</p>
+                        <div className="space-y-2">
+                          {MOCK_PRODUCTS.filter(p => p.section === selectedCategory).map(product => {
+                            const inCart = !!cart.find(c => c.id === product.id);
+                            return (
+                              <button key={product.id} onClick={() => !inCart && addProductToCart(product)} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart ? 'bg-emerald-50 border-emerald-200 opacity-60' : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'}`}>
+                                <div className="text-left min-w-0"><p className={`font-bold text-sm truncate ${inCart ? 'text-emerald-700 line-through' : 'text-gray-900'}`}>{product.name}</p>{product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}</div>
+                                <div className="text-right shrink-0 pl-3 flex items-center gap-2"><span className="font-black text-sm text-gray-800">{product.prices.SuperA.toFixed(2)}€</span>{inCart ? <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} /> : <Plus className="w-4 h-4 text-emerald-500" strokeWidth={3} />}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}

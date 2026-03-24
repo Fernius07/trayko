@@ -20,7 +20,6 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [sortCriteria, setSortCriteria] = useState('default');
-  const [showWizardPanel, setShowWizardPanel] = useState(false);
   const [animatingItem, setAnimatingItem] = useState(null);
   const [manualSearch, setManualSearch] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState([]);
@@ -194,14 +193,6 @@ export default function App() {
     setSortCriteria('section');
     showFeedback(`📍 ¡Has llegado a ${storeName}! Cambiando a Modo Tienda.`);
   };
-
-  const activeSections = useMemo(() => {
-    const sections = new Set();
-    cart.forEach(item => {
-      if (!item.checked) sections.add(item.section);
-    });
-    return sections;
-  }, [cart]);
 
   const totals = useMemo(() => {
     return ['SuperA', 'SuperB', 'SuperC'].map(store => {

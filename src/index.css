@@ -7,7 +7,7 @@
     @apply bg-gray-100 text-gray-900 font-sans antialiased;
     /* Hide scrollbar for better mobile feel */
     -ms-overflow-style: none;
-    scrollbar-width: none;
+    /* scrollbar-width: none; */
   }
   body::-webkit-scrollbar {
     display: none;

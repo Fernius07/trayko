@@ -7,6 +7,7 @@ import {
 import './index.css';
 import { MOCK_PRODUCTS } from './data/products.js';
 import { STORE_LAYOUTS } from './data/storeLayouts.js';
+import CameraScanner from './CameraScanner.jsx';
 // import MapEditor from './MapEditor.jsx';
 
 const SECTIONS_ORDER = [
@@ -29,6 +30,7 @@ export default function App() {
   const [selectedStore, setSelectedStore] = useState('SuperA');
   const [isFullScreenMap, setIsFullScreenMap] = useState(false);
   const [showFullRoute, setShowFullRoute] = useState(false);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
   // [TEMP] Map Design Editor - DISABLED
   // const [showMapEditor, setShowMapEditor] = useState(false);
 
@@ -148,21 +150,15 @@ export default function App() {
   };
 
   const handleCameraMock = () => {
-    triggerVibration([50]);
-    showFeedback("📸 Escaneando código de barras...");
-    setTimeout(() => {
-      const candidates = MOCK_PRODUCTS.filter(p => !cart.find(c => c.id === p.id));
-      if (candidates.length === 0) {
-        showFeedback("¡Tienes todo el supermercado en tu lista!");
-        return;
-      }
-      const randomProduct = candidates[Math.floor(Math.random() * candidates.length)];
-      setCart(prev => [...prev, { ...randomProduct, priority: false, checked: false }]);
-      setAnimatingItem(randomProduct.id);
-      setTimeout(() => setAnimatingItem(null), 500);
-      triggerVibration([100]);
-      showFeedback(`✨ ${randomProduct.name} detectado y añadido.`);
-    }, 1200);
+    setShowCameraScanner(true);
+  };
+
+  const handleCameraDetect = (category) => {
+    triggerVibration([100, 50, 100]);
+    showFeedback(`🎯 ¡Categoría detectada: ${category}!`);
+    setShowCameraScanner(false);
+    setSelectedCategory(category);
+    if (!showAddModal) setShowAddModal(true);
   };
 
   const handleRemove = (id) => {
@@ -1010,6 +1006,13 @@ export default function App() {
         {view === 'list' && renderList()}
         {view === 'compare' && renderCompare()}
         {view === 'store' && renderStoreMode()}
+
+        {showCameraScanner && (
+          <CameraScanner 
+             onClose={() => setShowCameraScanner(false)} 
+             onDetect={handleCameraDetect} 
+          />
+        )}
 
         {/* 🛒 Add Products Modal (Bottom Sheet - Absolute within frame) */}
         {showAddModal && (

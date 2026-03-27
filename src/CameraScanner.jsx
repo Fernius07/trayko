@@ -8,28 +8,53 @@ export default function CameraScanner({ onClose, onDetect }) {
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [predictions, setPredictions] = useState([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [pendingCategoryUI, setPendingCategoryUI] = useState(null);
+  const [facingMode, setFacingMode] = useState("environment");
   
   const canvasContainerRef = useRef(null);
   const modelRef = useRef(null);
   const webcamRef = useRef(null);
   const reqAnimFrameRef = useRef(null);
+  const pendingCategoryRef = useRef(null);
+  const deniedCategoriesRef = useRef(new Set());
 
+  // 1. Cargar el modelo de IA una sola vez
   useEffect(() => {
     let active = true;
-
-    async function init() {
+    async function loadModel() {
       try {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
-
         const model = await tmImage.load(modelURL, metadataURL);
         if (!active) return;
         modelRef.current = model;
+        setIsModelLoading(false);
+      } catch (err) {
+        console.error("Model error:", err);
+        if (active) setErrorMsg("Error al cargar el modelo de IA.");
+      }
+    }
+    loadModel();
+    return () => { active = false; };
+  }, []);
 
-        const flip = false;
-        // Setting flip to false since it's commonly better to not mirror the environment camera
-        const webcam = new tmImage.Webcam(400, 400, flip);
-        await webcam.setup({ facingMode: "environment" }); 
+  // 2. Iniciar / Reiniciar la cámara cuando cambie el facingMode
+  useEffect(() => {
+    let active = true;
+
+    async function startCamera() {
+      if (isModelLoading || !modelRef.current) return;
+
+      // Reiniciar la lista de denegados explícitamente al abrir la cámara
+      deniedCategoriesRef.current.clear();
+      pendingCategoryRef.current = null;
+      setPendingCategoryUI(null);
+
+      try {
+        const isFront = facingMode === "user";
+        const webcam = new tmImage.Webcam(400, 400, isFront);
+        
+        await webcam.setup({ facingMode: facingMode }); 
         
         if (!active) { 
            webcam.stop();
@@ -46,24 +71,29 @@ export default function CameraScanner({ onClose, onDetect }) {
           canvasContainerRef.current.appendChild(webcam.canvas);
         }
 
-        setIsModelLoading(false);
-
         const loop = async () => {
           if (!active) return;
           
-          webcam.update(); // Update the webcam frame
-          const preds = await model.predict(webcam.canvas);
+          webcam.update();
           
-          if (!active) return;
-          setPredictions(preds.map(p => ({
-             className: p.className,
-             probability: p.probability
-          })));
+          if (!pendingCategoryRef.current) {
+             const preds = await modelRef.current.predict(webcam.canvas);
+             
+             if (!active) return;
+             setPredictions(preds.map(p => ({
+                className: p.className,
+                probability: p.probability
+             })));
 
-          const bestPrediction = preds.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
-          if (bestPrediction.probability > 0.85 && bestPrediction.className !== "Background") {
-             onDetect(bestPrediction.className);
-             return; // Stop the loop
+             const bestPrediction = preds.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
+             if (
+               bestPrediction.probability > 0.85 && 
+               bestPrediction.className !== "Background" &&
+               !deniedCategoriesRef.current.has(bestPrediction.className)
+             ) {
+                pendingCategoryRef.current = bestPrediction.className;
+                setPendingCategoryUI(bestPrediction.className);
+             }
           }
 
           reqAnimFrameRef.current = window.requestAnimationFrame(loop);
@@ -73,24 +103,34 @@ export default function CameraScanner({ onClose, onDetect }) {
 
       } catch (err) {
         console.error("Camera error:", err);
-        if (active) setErrorMsg("Error al acceder a la cámara o cargar el modelo. Verifica tus permisos.");
+        if (active) setErrorMsg("Error al acceder a la cámara. Verifica los permisos de tu navegador o usa otra cámara.");
       }
     }
 
-    init();
+    startCamera();
 
     return () => {
       active = false;
       if (reqAnimFrameRef.current) window.cancelAnimationFrame(reqAnimFrameRef.current);
-      if (webcamRef.current) webcamRef.current.stop();
+      if (webcamRef.current) {
+         webcamRef.current.stop();
+         webcamRef.current = null;
+      }
     };
-  }, [onDetect]);
+  }, [facingMode, isModelLoading]);
 
   const bestPred = predictions.length > 0 ? predictions.reduce((prev, current) => (prev.probability > current.probability) ? prev : current) : null;
 
   return (
     <div className="absolute inset-0 z-[300] bg-black text-white flex flex-col justify-center animate-fade-in touch-none">
-      <div className="absolute top-6 right-6 z-10 flex gap-4">
+      <div className="absolute top-6 left-6 right-6 z-10 flex justify-between">
+        <button 
+           onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")} 
+           className="bg-gray-800/80 p-3 rounded-xl border border-white/10 hover:bg-gray-700 transition flex items-center gap-2 font-bold text-sm"
+        >
+          <RefreshCw className="w-5 h-5 text-emerald-400" />
+          Alternar Cámara
+        </button>
         <button onClick={onClose} className="bg-gray-800/80 p-3 rounded-full hover:bg-gray-700 transition">
           <X className="w-6 h-6 text-white" />
         </button>
@@ -125,7 +165,7 @@ export default function CameraScanner({ onClose, onDetect }) {
         )}
       </div>
 
-      {!isModelLoading && !errorMsg && predictions.length > 0 && (
+      {!isModelLoading && !errorMsg && predictions.length > 0 && !pendingCategoryUI && (
          <div className="absolute bottom-10 left-6 right-6 pointer-events-none">
             <div className="bg-gray-900/80 backdrop-blur border border-white/10 rounded-2xl p-5 shadow-2xl">
               <div className="flex justify-between items-end mb-2">
@@ -147,6 +187,36 @@ export default function CameraScanner({ onClose, onDetect }) {
             </div>
          </div>
       )}
+
+      {/* Confirmation Dialog */}
+      {pendingCategoryUI && (
+        <div className="absolute bottom-8 left-6 right-6 z-[350]">
+          <div className="bg-gray-900/95 backdrop-blur-md border border-emerald-500/50 rounded-3xl p-6 shadow-2xl animate-fade-in text-center">
+            <h3 className="text-2xl font-black mb-1 text-white">¿Es <span className="text-emerald-400">{pendingCategoryUI}</span>?</h3>
+            <p className="text-gray-400 text-sm mb-6">Confirma si he detectado bien la categoría.</p>
+            <div className="flex gap-4 justify-center">
+              <button 
+                onClick={() => {
+                  // Add to deny list and resume scanning
+                  deniedCategoriesRef.current.add(pendingCategoryUI);
+                  pendingCategoryRef.current = null;
+                  setPendingCategoryUI(null);
+                }}
+                className="flex-1 py-3.5 px-4 rounded-xl font-bold bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 text-white transition-all"
+              >
+                No, buscar otra
+              </button>
+              <button 
+                 onClick={() => onDetect(pendingCategoryUI)}
+                 className="flex-1 py-3.5 px-4 rounded-xl font-black bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-all"
+              >
+                Sí, correcto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes scanner { 0% { transform: translateY(0); } 100% { transform: translateY(calc(70vh - 4rem)); } }
       `}} />

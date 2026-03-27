@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as tmImage from '@teachablemachine/image';
 import { X, Camera, RefreshCw } from 'lucide-react';
 
-const URL = "https://teachablemachine.withgoogle.com/models/Si2Ohsjb_/";
+const URL = "https://teachablemachine.withgoogle.com/models/atXEPnBi7/";
 
 export default function CameraScanner({ onClose, onDetect }) {
   const [isModelLoading, setIsModelLoading] = useState(true);
@@ -10,7 +10,7 @@ export default function CameraScanner({ onClose, onDetect }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingCategoryUI, setPendingCategoryUI] = useState(null);
   const [facingMode, setFacingMode] = useState("environment");
-  
+
   const canvasContainerRef = useRef(null);
   const modelRef = useRef(null);
   const webcamRef = useRef(null);
@@ -53,12 +53,12 @@ export default function CameraScanner({ onClose, onDetect }) {
       try {
         const isFront = facingMode === "user";
         const webcam = new tmImage.Webcam(400, 400, isFront);
-        
-        await webcam.setup({ facingMode: facingMode }); 
-        
-        if (!active) { 
-           webcam.stop();
-           return;
+
+        await webcam.setup({ facingMode: facingMode });
+
+        if (!active) {
+          webcam.stop();
+          return;
         }
         await webcam.play();
         webcamRef.current = webcam;
@@ -73,32 +73,32 @@ export default function CameraScanner({ onClose, onDetect }) {
 
         const loop = async () => {
           if (!active) return;
-          
-          webcam.update();
-          
-          if (!pendingCategoryRef.current) {
-             const preds = await modelRef.current.predict(webcam.canvas);
-             
-             if (!active) return;
-             setPredictions(preds.map(p => ({
-                className: p.className,
-                probability: p.probability
-             })));
 
-             const bestPrediction = preds.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
-             if (
-               bestPrediction.probability > 0.85 && 
-               bestPrediction.className !== "Background" &&
-               !deniedCategoriesRef.current.has(bestPrediction.className)
-             ) {
-                pendingCategoryRef.current = bestPrediction.className;
-                setPendingCategoryUI(bestPrediction.className);
-             }
+          webcam.update();
+
+          if (!pendingCategoryRef.current) {
+            const preds = await modelRef.current.predict(webcam.canvas);
+
+            if (!active) return;
+            setPredictions(preds.map(p => ({
+              className: p.className,
+              probability: p.probability
+            })));
+
+            const bestPrediction = preds.reduce((prev, current) => (prev.probability > current.probability) ? prev : current);
+            if (
+              bestPrediction.probability > 0.85 &&
+              bestPrediction.className !== "Background" &&
+              !deniedCategoriesRef.current.has(bestPrediction.className)
+            ) {
+              pendingCategoryRef.current = bestPrediction.className;
+              setPendingCategoryUI(bestPrediction.className);
+            }
           }
 
           reqAnimFrameRef.current = window.requestAnimationFrame(loop);
         };
-        
+
         reqAnimFrameRef.current = window.requestAnimationFrame(loop);
 
       } catch (err) {
@@ -113,8 +113,8 @@ export default function CameraScanner({ onClose, onDetect }) {
       active = false;
       if (reqAnimFrameRef.current) window.cancelAnimationFrame(reqAnimFrameRef.current);
       if (webcamRef.current) {
-         webcamRef.current.stop();
-         webcamRef.current = null;
+        webcamRef.current.stop();
+        webcamRef.current = null;
       }
     };
   }, [facingMode, isModelLoading]);
@@ -124,9 +124,9 @@ export default function CameraScanner({ onClose, onDetect }) {
   return (
     <div className="absolute inset-0 z-[300] bg-black text-white flex flex-col justify-center animate-fade-in touch-none">
       <div className="absolute top-6 left-6 right-6 z-10 flex justify-between">
-        <button 
-           onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")} 
-           className="bg-gray-800/80 p-3 rounded-xl border border-white/10 hover:bg-gray-700 transition flex items-center gap-2 font-bold text-sm"
+        <button
+          onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
+          className="bg-gray-800/80 p-3 rounded-xl border border-white/10 hover:bg-gray-700 transition flex items-center gap-2 font-bold text-sm"
         >
           <RefreshCw className="w-5 h-5 text-emerald-400" />
           Alternar Cámara
@@ -160,32 +160,32 @@ export default function CameraScanner({ onClose, onDetect }) {
 
         {!isModelLoading && !errorMsg && (
           <div className="absolute inset-8 border-2 border-emerald-500/30 rounded-3xl pointer-events-none">
-             <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_15px_#34d399] animate-[scanner_2s_ease-in-out_infinite]" style={{ animation: "scanner 2.5s ease-in-out infinite alternate" }} />
+            <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_15px_#34d399] animate-[scanner_2s_ease-in-out_infinite]" style={{ animation: "scanner 2.5s ease-in-out infinite alternate" }} />
           </div>
         )}
       </div>
 
       {!isModelLoading && !errorMsg && predictions.length > 0 && !pendingCategoryUI && (
-         <div className="absolute bottom-10 left-6 right-6 pointer-events-none">
-            <div className="bg-gray-900/80 backdrop-blur border border-white/10 rounded-2xl p-5 shadow-2xl">
-              <div className="flex justify-between items-end mb-2">
-                 <span className="text-gray-400 text-xs font-black uppercase tracking-widest">Detectando...</span>
-                 <span className="text-emerald-400 text-sm font-black text-right">
-                    {bestPred.probability > 0.1 ? Math.round(bestPred.probability * 100) + '%' : ''}
-                 </span>
-              </div>
-              <p className={`text-2xl font-black transition-colors duration-300 ${bestPred.probability > 0.5 ? 'text-white' : 'text-gray-500'}`}>
-                 {bestPred.probability > 0.2 ? bestPred.className : 'Buscando...'}
-              </p>
-              
-              <div className="w-full bg-gray-800 h-2 rounded-full mt-3 overflow-hidden">
-                 <div 
-                   className="h-full bg-emerald-400 transition-all duration-100 ease-out" 
-                   style={{ width: `${Math.round((bestPred.probability || 0) * 100)}%` }}
-                 />
-              </div>
+        <div className="absolute bottom-10 left-6 right-6 pointer-events-none">
+          <div className="bg-gray-900/80 backdrop-blur border border-white/10 rounded-2xl p-5 shadow-2xl">
+            <div className="flex justify-between items-end mb-2">
+              <span className="text-gray-400 text-xs font-black uppercase tracking-widest">Detectando...</span>
+              <span className="text-emerald-400 text-sm font-black text-right">
+                {bestPred.probability > 0.1 ? Math.round(bestPred.probability * 100) + '%' : ''}
+              </span>
             </div>
-         </div>
+            <p className={`text-2xl font-black transition-colors duration-300 ${bestPred.probability > 0.5 ? 'text-white' : 'text-gray-500'}`}>
+              {bestPred.probability > 0.2 ? bestPred.className : 'Buscando...'}
+            </p>
+
+            <div className="w-full bg-gray-800 h-2 rounded-full mt-3 overflow-hidden">
+              <div
+                className="h-full bg-emerald-400 transition-all duration-100 ease-out"
+                style={{ width: `${Math.round((bestPred.probability || 0) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirmation Dialog */}
@@ -195,7 +195,7 @@ export default function CameraScanner({ onClose, onDetect }) {
             <h3 className="text-2xl font-black mb-1 text-white">¿Es <span className="text-emerald-400">{pendingCategoryUI}</span>?</h3>
             <p className="text-gray-400 text-sm mb-6">Confirma si he detectado bien la categoría.</p>
             <div className="flex gap-4 justify-center">
-              <button 
+              <button
                 onClick={() => {
                   // Add to deny list and resume scanning
                   deniedCategoriesRef.current.add(pendingCategoryUI);
@@ -206,9 +206,9 @@ export default function CameraScanner({ onClose, onDetect }) {
               >
                 No, buscar otra
               </button>
-              <button 
-                 onClick={() => onDetect(pendingCategoryUI)}
-                 className="flex-1 py-3.5 px-4 rounded-xl font-black bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-all"
+              <button
+                onClick={() => onDetect(pendingCategoryUI)}
+                className="flex-1 py-3.5 px-4 rounded-xl font-black bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-all"
               >
                 Sí, correcto
               </button>
@@ -217,7 +217,8 @@ export default function CameraScanner({ onClose, onDetect }) {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes scanner { 0% { transform: translateY(0); } 100% { transform: translateY(calc(70vh - 4rem)); } }
       `}} />
     </div>

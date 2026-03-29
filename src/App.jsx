@@ -1,8 +1,8 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   Mic, Camera, Search, Trash2, MapPin, ShoppingCart,
   ListOrdered, Plus, Zap, Check, Star, Navigation,
-  Maximize2, X, ChevronRight
+  Maximize2, X, ChevronRight, History, Heart
 } from 'lucide-react';
 import './index.css';
 import { MOCK_PRODUCTS } from './data/products.js';
@@ -34,6 +34,24 @@ export default function App() {
   // [TEMP] Map Design Editor - DISABLED
   // const [showMapEditor, setShowMapEditor] = useState(false);
 
+  // --- ALMACENAMIENTO DE HISTORIAL Y FAVORITOS ---
+  const [purchaseHistory, setPurchaseHistory] = useState(() => {
+    const saved = sessionStorage.getItem('trayko_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [favoriteProducts, setFavoriteProducts] = useState(() => {
+    const saved = sessionStorage.getItem('trayko_favorites');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('trayko_history', JSON.stringify(purchaseHistory));
+  }, [purchaseHistory]);
+
+  useEffect(() => {
+    sessionStorage.setItem('trayko_favorites', JSON.stringify(favoriteProducts));
+  }, [favoriteProducts]);
+
   const pressTimer = useRef(null);
 
   // --- FUNCIONES DE FEEDBACK Y UTILIDADES ---
@@ -54,7 +72,7 @@ export default function App() {
       showFeedback(`"${product.name}" ya está en tu lista.`);
       return;
     }
-    setCart(prev => [...prev, { ...product, priority: false, checked: false }]);
+    setCart(prev => [...prev, { ...product, checked: false }]);
     setAnimatingItem(product.id);
     setTimeout(() => setAnimatingItem(null), 600);
     triggerVibration([80]);
@@ -166,12 +184,11 @@ export default function App() {
     setCart(cart.filter(p => p.id !== id));
   };
 
-  const handleTouchStart = (id) => {
+  const handleTouchStart = (productId) => {
     pressTimer.current = setTimeout(() => {
       triggerVibration([50, 100, 50]);
-      setCart(cart.map(p => p.id === id ? { ...p, priority: !p.priority } : p));
-      showFeedback("⭐️ Prioridad de artículo actualizada");
-    }, 500); // reduced time for better responsiveness
+      toggleFavoriteProduct(productId);
+    }, 600); 
   };
 
   const handleTouchEnd = () => {
@@ -180,6 +197,59 @@ export default function App() {
 
   const toggleCheck = (id) => {
     setCart(cart.map(p => p.id === id ? { ...p, checked: !p.checked } : p));
+  };
+
+  const toggleFavoriteProduct = (productId) => {
+    setFavoriteProducts(prev => {
+      const isFav = prev.includes(productId);
+      if (isFav) {
+        showFeedback("🗑️ Eliminado de productos favoritos");
+        return prev.filter(id => id !== productId);
+      } else {
+        triggerVibration([50]);
+        showFeedback("⭐ ¡Añadido a tus favoritos!");
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const finalizePurchase = () => {
+    const newPurchase = {
+      id: Date.now(),
+      date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      items: [...cart],
+      isFavorite: false,
+      store: selectedStore,
+      total: estimatedBudget
+    };
+    setPurchaseHistory(prev => [newPurchase, ...prev]);
+    setCart([]);
+    setView('home');
+    showFeedback("🏆 ¡Compra finalizada con éxito!");
+    triggerVibration([100, 50, 100]);
+  };
+
+  const applyQuickPurchase = (purchase) => {
+    // Add items from purchase to cart, avoiding duplicates
+    setCart(prev => {
+      let nextCart = [...prev];
+      purchase.items.forEach(item => {
+        if (!nextCart.find(c => c.id === item.id)) {
+          nextCart.push({ ...item, checked: false });
+        }
+      });
+      return nextCart;
+    });
+    setView('list');
+    showFeedback("✨ Compra rápida aplicada");
+    triggerVibration([80]);
+  };
+
+  const toggleFavoritePurchase = (purchaseId) => {
+    setPurchaseHistory(prev => prev.map(p => 
+      p.id === purchaseId ? { ...p, isFavorite: !p.isFavorite } : p
+    ));
+    showFeedback("⭐️ Historial actualizado");
   };
 
   const simulateGeofence = (storeName = 'SuperA') => {
@@ -209,7 +279,7 @@ export default function App() {
     if (sortCriteria === 'section') {
       sorted.sort((a, b) => SECTIONS_ORDER.indexOf(a.section) - SECTIONS_ORDER.indexOf(b.section));
     }
-    sorted.sort((a, b) => (a.priority === b.priority) ? 0 : a.priority ? -1 : 1);
+    // Priority sorting removed as requested
     return sorted;
   }, [cart, sortCriteria]);
 
@@ -231,13 +301,20 @@ export default function App() {
         <p className="text-gray-500 text-lg font-medium tracking-wide">Smart Shopping. Smart Savings.</p>
       </div>
 
-      <div className="glass-effect p-6 rounded-[2rem] w-full max-w-sm relative z-10">
+      <div className="glass-effect p-6 rounded-[2rem] w-full max-w-sm relative z-10 space-y-3">
         <button
           onClick={() => setView('list')}
           className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 hover:bg-black transition-all transform active:scale-[0.98] shadow-lg shadow-gray-900/30"
         >
           <ListOrdered className="w-6 h-6" />
           Preparar la Lista
+        </button>
+        <button
+          onClick={() => setView('history')}
+          className="w-full bg-white border border-gray-200 text-gray-700 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-all transform active:scale-[0.98] shadow-sm"
+        >
+          <History className="w-4 h-4" />
+          Historial y Favoritos
         </button>
       </div>
     </div>
@@ -269,7 +346,7 @@ export default function App() {
       </div>
 
       {/* List Container */}
-      <div className="flex-1 overflow-y-auto p-4 px-5 space-y-3 scrollbar-hide w-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 px-5 space-y-3 scrollbar-hide w-full">
         {cart.length === 0 ? (
           <div className="text-center text-gray-400 mt-10 flex flex-col items-center animate-fade-in px-4">
             <div className="bg-gray-200 p-6 rounded-full mb-6">
@@ -309,8 +386,7 @@ export default function App() {
               <div
                 key={item.id}
                 className={`relative flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border transition-all duration-300 transform ${animatingItem === item.id ? 'scale-[1.03] shadow-lg ring-2 ring-emerald-400 border-none' : ''
-                  } ${item.priority ? 'border-yellow-300 bg-yellow-50/50' : 'border-gray-200 hover:shadow-md'}`}
-                style={{ background: item.priority ? 'linear-gradient(135deg, #fefce8 0%, #ffffff 100%)' : 'white' }}
+                  } border-gray-200 hover:shadow-md`}
                 onMouseDown={() => handleTouchStart(item.id)}
                 onMouseUp={handleTouchEnd}
                 onMouseLeave={handleTouchEnd}
@@ -322,7 +398,7 @@ export default function App() {
                   <Trash2 className="w-6 h-6 text-white animate-pulse" />
                 </div>
                 <div className="flex items-center gap-4 min-w-0 bg-white" style={{ background: 'inherit' }}>
-                  <div className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${item.priority ? 'bg-yellow-400 shadow-yellow-400/50' : 'bg-gray-200'}`}></div>
+                  <div className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${favoriteProducts.includes(item.id) ? 'bg-yellow-400 shadow-yellow-400/50' : 'bg-gray-200'}`}></div>
                   <div className="min-w-0">
                     <p className="font-bold text-gray-900 text-[1.05rem] truncate">{item.name}</p>
                     <p className="text-xs text-gray-500 font-medium tracking-wide uppercase mt-0.5 truncate">{item.section}</p>
@@ -970,11 +1046,7 @@ export default function App() {
               {/* Finish button if everything checked */}
               {cart.length > 0 && cart.every(i => i.checked) && (
                 <button
-                  onClick={() => {
-                    setView('home');
-                    showFeedback("🏆 ¡Compra finalizada con éxito!");
-                    triggerVibration([100, 50, 100]);
-                  }}
+                  onClick={finalizePurchase}
                   className="w-full mt-4 premium-gradient text-white py-4 rounded-3xl font-black text-lg shadow-xl animate-bounce"
                 >
                   FINALIZAR COMPRA
@@ -986,6 +1058,84 @@ export default function App() {
       </div>
     );
   };
+
+  const renderHistory = () => (
+    <div className="flex flex-col h-full bg-gray-50 overflow-hidden animate-fade-in w-full max-w-full">
+      <div className="flex-shrink-0 premium-gradient text-white px-6 pt-10 pb-10 rounded-b-[2.5rem] shadow-lg z-10 relative">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-black tracking-tight">Historial</h2>
+            <p className="text-emerald-100 text-xs font-bold mt-1 uppercase tracking-wider">Tus compras anteriores</p>
+          </div>
+          <History className="w-8 h-8 opacity-50" />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-hide">
+        {purchaseHistory.length === 0 ? (
+          <div className="text-center text-gray-400 mt-10">
+            <p className="text-lg font-bold">No hay compras registradas</p>
+            <p className="text-sm">Tus compras aparecerán aquí cuando las finalices.</p>
+          </div>
+        ) : (
+          purchaseHistory.map(purchase => (
+            <div key={purchase.id} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{purchase.date}</p>
+                  <h3 className="text-lg font-black text-gray-900">{purchase.store}</h3>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-black premium-text-gradient">{purchase.total}€</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">{purchase.items.length} productos</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {purchase.items.slice(0, 4).map(item => (
+                  <span key={item.id} className="bg-gray-50 text-gray-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-gray-100 uppercase tracking-tighter">
+                    {item.name}
+                  </span>
+                ))}
+                {purchase.items.length > 4 && (
+                  <span className="text-gray-400 text-[10px] font-bold flex items-center">+{purchase.items.length - 4}</span>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-gray-50">
+                <button
+                  onClick={() => applyQuickPurchase(purchase)}
+                  className="flex-1 bg-emerald-500/10 text-emerald-600 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all border border-emerald-500/20"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  REPETIR COMPRA
+                </button>
+                <button
+                  onClick={() => toggleFavoritePurchase(purchase.id)}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center active:scale-90 transition-all border ${
+                    purchase.isFavorite 
+                    ? 'bg-yellow-400 border-yellow-500 text-white shadow-lg shadow-yellow-200' 
+                    : 'bg-gray-50 border-gray-100 text-gray-400'
+                  }`}
+                >
+                  <Star className={`w-5 h-5 ${purchase.isFavorite ? 'fill-current' : ''}`} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="p-5 pb-8">
+        <button
+          onClick={() => setView('home')}
+          className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+        >
+          Volver al Inicio
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="w-full sm:max-w-[340px] mx-auto h-[100dvh] sm:h-[720px] sm:my-8 bg-gray-50 sm:rounded-[3rem] sm:shadow-2xl relative sm:border-[12px] sm:border-black flex flex-col font-sans overflow-hidden">
@@ -1006,6 +1156,7 @@ export default function App() {
         {view === 'list' && renderList()}
         {view === 'compare' && renderCompare()}
         {view === 'store' && renderStoreMode()}
+        {view === 'history' && renderHistory()}
 
         {showCameraScanner && (
           <CameraScanner 
@@ -1173,13 +1324,32 @@ export default function App() {
                         <button type="button" onClick={handleCameraMock} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-all"><Camera className="w-4 h-4 text-white" /></button>
                       </div>
                       {searchSuggestions.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-50 border border-gray-100 max-h-60 overflow-y-auto">
-                          {searchSuggestions.map((product, i) => (
-                            <button key={product.id} type="button" onClick={() => { addProductToCart(product); setManualSearch(''); setSearchSuggestions([]); }} className={`w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left ${i < searchSuggestions.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                              <div><p className="font-bold text-gray-900 text-sm">{product.name}</p><p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{product.section}</p></div>
-                              <span className="text-emerald-600 font-black text-sm shrink-0 ml-3">{product.prices.SuperA.toFixed(2)}€</span>
-                            </button>
-                          ))}
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-x-hidden z-50 border border-gray-100 max-h-60 overflow-y-auto">
+                          {searchSuggestions.map((product, i) => {
+                            const isFav = favoriteProducts.includes(product.id);
+                            return (
+                              <button 
+                                key={product.id} 
+                                type="button" 
+                                onMouseDown={() => handleTouchStart(product.id)}
+                                onMouseUp={handleTouchEnd}
+                                onMouseLeave={handleTouchEnd}
+                                onTouchStart={() => handleTouchStart(product.id)}
+                                onTouchEnd={handleTouchEnd}
+                                onClick={() => { addProductToCart(product); setManualSearch(''); setSearchSuggestions([]); }} 
+                                className={`w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left ${i < searchSuggestions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                              >
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="font-bold text-gray-900 text-sm">{product.name}</p>
+                                    {isFav && <Star className="w-3 h-3 text-yellow-500 fill-current" />}
+                                  </div>
+                                  <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{product.section}</p>
+                                </div>
+                                <span className="text-emerald-600 font-black text-sm shrink-0 ml-3">{product.prices.SuperA.toFixed(2)}€</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </form>
@@ -1189,6 +1359,15 @@ export default function App() {
                       <div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Explorar por categoría</p>
                         <div className="grid grid-cols-2 gap-3">
+                          {/* Categoría Especial: Favoritos */}
+                          <button 
+                            onClick={() => setSelectedCategory('Favoritos')} 
+                            className="bg-white rounded-2xl p-4 shadow-sm border border-yellow-100 flex items-center justify-between hover:bg-yellow-50 hover:border-yellow-200 active:scale-[0.97] transition-all"
+                          >
+                            <div className="text-left"><span className="text-2xl">⭐</span><p className="font-black text-gray-800 text-sm mt-1">Favoritos</p><p className="text-[10px] text-gray-400 font-semibold">{favoriteProducts.length} guardados</p></div>
+                            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                          </button>
+
                           {SECTIONS_ORDER.map(cat => {
                             const count = MOCK_PRODUCTS.filter(p => p.section === cat && !cart.find(c => c.id === p.id)).length;
                             const emoji = { Fruta: '🍎', Verdura: '🥦', Pan: '🍞', Despensa: '🫙', Snacks: '🍿', Lácteos: '🥛', Congelados: '❄️', Carnicería: '🥩', Pescadería: '🐟', Charcutería: '🧆', Bebidas: '🥤', Higiene: '🧼', Limpieza: '🧹' }[cat] || '🛒';
@@ -1208,12 +1387,34 @@ export default function App() {
                         </button>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{selectedCategory}</p>
                         <div className="space-y-2">
-                          {MOCK_PRODUCTS.filter(p => p.section === selectedCategory).map(product => {
+                          {(selectedCategory === 'Favoritos' 
+                            ? MOCK_PRODUCTS.filter(p => favoriteProducts.includes(p.id))
+                            : MOCK_PRODUCTS.filter(p => p.section === selectedCategory)
+                          ).map(product => {
                             const inCart = !!cart.find(c => c.id === product.id);
+                            const isFav = favoriteProducts.includes(product.id);
                             return (
-                              <button key={product.id} onClick={() => !inCart && addProductToCart(product)} className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart ? 'bg-emerald-50 border-emerald-200 opacity-60' : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'}`}>
-                                <div className="text-left min-w-0"><p className={`font-bold text-sm truncate ${inCart ? 'text-emerald-700 line-through' : 'text-gray-900'}`}>{product.name}</p>{product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}</div>
-                                <div className="text-right shrink-0 pl-3 flex items-center gap-2"><span className="font-black text-sm text-gray-800">{product.prices.SuperA.toFixed(2)}€</span>{inCart ? <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} /> : <Plus className="w-4 h-4 text-emerald-500" strokeWidth={3} />}</div>
+                              <button 
+                                key={product.id} 
+                                onMouseDown={() => handleTouchStart(product.id)}
+                                onMouseUp={handleTouchEnd}
+                                onMouseLeave={handleTouchEnd}
+                                onTouchStart={() => handleTouchStart(product.id)}
+                                onTouchEnd={handleTouchEnd}
+                                onClick={() => !inCart && addProductToCart(product)} 
+                                className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${inCart ? 'bg-emerald-50 border-emerald-200 opacity-60' : 'bg-white border-gray-100 shadow-sm hover:bg-emerald-50 hover:border-emerald-200 active:scale-[0.98]'} ${isFav ? 'ring-2 ring-yellow-400/30' : ''}`}
+                              >
+                                <div className="text-left min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <p className={`font-bold text-sm truncate ${inCart ? 'text-emerald-700 line-through' : 'text-gray-900'}`}>{product.name}</p>
+                                    {isFav && <Star className="w-3 h-3 text-yellow-500 fill-current" />}
+                                  </div>
+                                  {product.offer && <p className="text-[10px] text-yellow-600 font-bold">{product.offer.desc}</p>}
+                                </div>
+                                <div className="text-right shrink-0 pl-3 flex items-center gap-2">
+                                  <span className="font-black text-sm text-gray-800">{product.prices.SuperA.toFixed(2)}€</span>
+                                  {inCart ? <Check className="w-4 h-4 text-emerald-500" strokeWidth={3} /> : <Plus className="w-4 h-4 text-emerald-500" strokeWidth={3} />}
+                                </div>
                               </button>
                             );
                           })}

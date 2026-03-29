@@ -4,6 +4,7 @@ import {
   ListOrdered, Plus, Zap, Check, Star, Navigation,
   Maximize2, X, ChevronRight, History, Heart
 } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import './index.css';
 import { MOCK_PRODUCTS } from './data/products.js';
 import { STORE_LAYOUTS } from './data/storeLayouts.js';
@@ -1451,6 +1452,7 @@ export default function App() {
           </button>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
